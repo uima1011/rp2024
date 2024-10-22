@@ -2,7 +2,7 @@
 
 This repository contains the code for the robot programming course (the policy learning part) at the University of Applied Sciences Karlsruhe.
 
-We will use and update this repository throughout the course.
+We will use and update this repository throughout the course. Hello.
 
 ## Quick start
 
