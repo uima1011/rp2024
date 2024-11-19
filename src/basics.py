@@ -45,8 +45,6 @@ robot.lin(target_pose)
 
 # open the gripper
 gripper.open()
-# close the gripper
-gripper.close()
 
 # spawn an object
 object_urdf_path = "/home/jovyan/workspace/assets/objects/cube/object.urdf"
@@ -66,6 +64,15 @@ for _ in range(100):
 position, quat = bullet_client.getBasePositionAndOrientation(object_id)
 object_pose = Affine(position, quat)
 print(object_pose)
+
+# grab the object
+gripper_rotation = Affine(rotation=[0, np.pi, 0])
+target_pose = object_pose * gripper_rotation
+pre_grasp_offset = Affine(translation=[0, 0, -0.1])
+pre_grasp_pose = target_pose * pre_grasp_offset
+robot.ptp(pre_grasp_pose)
+robot.lin(target_pose)
+gripper.close()
 
 # close the simulation
 bullet_client.disconnect()
