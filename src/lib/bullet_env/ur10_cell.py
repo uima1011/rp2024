@@ -5,29 +5,33 @@ import pybullet as p
 import pybullet_data
 from collections import namedtuple
 from loguru import logger
+from transform.affine import Affine
 
-from transform import Affine
+from bullet_env.util import stdout_redirected
 
 JointInfo = namedtuple('JointInfo',
                        ['id', 'name', 'type', 'damping', 'friction', 'lowerLimit', 'upperLimit', 'maxForce',
                         'maxVelocity', 'controllable'])
 
 
-class BulletRobot:
+class UR10Cell:
     def __init__(self,
                  bullet_client,
                  urdf_path,
+                 workspace_bounds,
                  joint_indices=(0, 6),
                  ee_name='tcp_link'):
 
         self.bullet_client = bullet_client
         self.urdf_path = urdf_path
+        self.workspace_bounds = np.array(workspace_bounds)
         self.bullet_client.setAdditionalSearchPath(pybullet_data.getDataPath())
-        self.bullet_client.setGravity(0, 0, -10)
 
-        self.robot_id = self.bullet_client.loadURDF(self.urdf_path, [0, 0, 0], [0, 0, 0, 1],
-                                                    useFixedBase=True,
-                                                    flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES | p.URDF_USE_SELF_COLLISION | p.URDF_USE_MATERIAL_COLORS_FROM_MTL)
+        self.bullet_client.setGravity(0, 0, -10)
+        with stdout_redirected():
+            self.robot_id = self.bullet_client.loadURDF(self.urdf_path, [0, 0, 0], [0, 0, 0, 1],
+                                                        useFixedBase=True,
+                                                        flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES | p.URDF_USE_SELF_COLLISION | p.URDF_USE_MATERIAL_COLORS_FROM_MTL)
         link_index = {}
         for _id in range(p.getNumJoints(self.robot_id)):
             link_name = p.getJointInfo(self.robot_id, _id)[12].decode('UTF-8')
@@ -43,7 +47,8 @@ class BulletRobot:
         self.controllable_joints = self.setup_joints()
         logger.debug("Controllable joints: {}".format(self.controllable_joints))
         logger.info("Robot loaded")
-        self.gripper = None
+        self.gripper = RobotiqGripper(bullet_client=bullet_client, robot_id=self.robot_id)
+
 
     def setup_joints(self):
         all_joints = []
@@ -71,13 +76,21 @@ class BulletRobot:
         self.target_joint_positions = copy.deepcopy(self.home_position)
         self.target_reached = False
         self.current_sequence = []
-        self.step()
         self.bullet_client.stepSimulation()
+        eef_pose = self.get_eef_pose()
+        self.ptp(eef_pose)
 
     def step(self,
              gain=0.033,
              velocity=0.15,
-             precision=0.0015) -> None:
+             precision=0.0025) -> None:
+        """
+        Move the robot arm in one simulation step.
+        
+        Calculate the joint positions in the next step and 
+        set is as the target position for the bullet motor controller
+        """
+
         current_position = [self.bullet_client.getJointState(self.robot_id, i)[0] for i in self.controllable_joints]
         current_position = np.array(current_position)
         difference = self.target_joint_positions - current_position
@@ -130,7 +143,8 @@ class BulletRobot:
             jointRanges=[4 * np.pi] * 6,
             restPoses=list(self.home_position),
             maxNumIterations=10000,
-            residualThreshold=1e-5
+            residualThreshold=1e-5,
+            solver=p.IK_DLS
         )
         robot_joint_positions = joint_positions[self.joint_indices[0]:self.joint_indices[1]]
 
@@ -160,8 +174,8 @@ class BulletRobot:
                     break
 
 
-class BulletGripper:
-    def __init__(self, bullet_client, robot_id):
+class RobotiqGripper:
+    def __init__(self, bullet_client, robot_id, mimic_parent_name='finger_joint'):
         self.bullet_client = bullet_client
         self.opened = True
         self.robot_id = robot_id
@@ -174,7 +188,6 @@ class BulletGripper:
             args = [info[0], info[1].decode("utf-8"), info[3], *info[6:12], controllable]
             info = JointInfo(*args)
             joints.append(info)
-        mimic_parent_name = 'finger_joint'
         self.mimic_parent_id = [joint.id for joint in joints if joint.name == mimic_parent_name][0]
         logger.debug(f"Mimic parent id: {self.mimic_parent_id}")
 
@@ -182,7 +195,9 @@ class BulletGripper:
             {
                 'right_outer_knuckle_joint': 1,
                 'left_inner_finger_joint': -1,
-                'right_inner_finger_joint': -1
+                'right_inner_finger_joint': -1,
+                'right_inner_knuckle_joint': 1,
+                'left_inner_knuckle_joint': 1
             }
         self.mimic_child_multiplier = {joint.id: mimic_children_names[joint.name] for joint in joints if
                                        joint.name in mimic_children_names}
@@ -204,16 +219,16 @@ class BulletGripper:
         logger.debug("Closing gripper")
         max_force = 5
         self.bullet_client.setJointMotorControl2(
-            self.robot_id, self.mimic_parent_id, p.VELOCITY_CONTROL, targetVelocity=40.0, force=max_force)
-        for _ in range(100):
+            self.robot_id, self.mimic_parent_id, p.VELOCITY_CONTROL, targetVelocity=10.0, force=max_force)
+        for _ in range(200):
             self.bullet_client.stepSimulation()
 
     def open(self):
         logger.debug("Opening gripper")
-        position_parent_joint, _, _, _ = self.bullet_client.getJointState(self.robot_id, self.mimic_parent_id)
+        _, _, _, _ = self.bullet_client.getJointState(self.robot_id, self.mimic_parent_id)
         self.bullet_client.setJointMotorControl2(self.robot_id, self.mimic_parent_id, p.POSITION_CONTROL,
                                                  targetPosition=0.3, force=50)
-        for _ in range(100):
+        for _ in range(200):
             self.bullet_client.stepSimulation()
 
     def get_state(self):

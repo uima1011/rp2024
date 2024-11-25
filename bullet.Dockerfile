@@ -66,8 +66,9 @@ RUN pip install --no-cache-dir numpy opencv-python opencv-contrib-python
 RUN pip install --no-cache-dir pybullet
 RUN pip install --no-cache-dir loguru
 RUN pip install --no-cache-dir scipy
+RUN pip install --no-cache-dir hydra-core omegaconf
 
-ENV PYTHONPATH=/home/$USER/workspace/src:$PYTHONPATH
+ENV PYTHONPATH=/home/$USER/workspace/src/lib:$PYTHONPATH
 
 WORKDIR /home/$USER/workspace/src
 CMD ["bash"]

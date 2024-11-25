@@ -1,12 +1,10 @@
 import time
 import pybullet as p
-import numpy as np
 from pybullet_utils.bullet_client import BulletClient
 
-from bullet_env.bullet_robot import BulletRobot, BulletGripper
-from transform import Affine
+from bullet_env.ur10_cell import UR10Cell
+from transform.affine import Affine
 
-# setup
 RENDER = True
 URDF_PATH = "/home/jovyan/workspace/assets/urdf/robot.urdf"
 
@@ -15,10 +13,8 @@ bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 if not RENDER:
     bullet_client.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
-bullet_client.resetSimulation()
+robot = UR10Cell(bullet_client=bullet_client, urdf_path=URDF_PATH)
 
-robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)
-gripper = BulletGripper(bullet_client=bullet_client, robot_id=robot.robot_id)
 
 # robot commands 
 # move the robot to the home position instantly, without real execution
@@ -44,28 +40,37 @@ target_pose = relative_pose * current_pose
 robot.lin(target_pose)
 
 # open the gripper
-gripper.open()
+robot.gripper.open()
+time.sleep(5)
+
 # close the gripper
-gripper.close()
+robot.gripper.close()
+time.sleep(5)
+# open the gripper
+robot.gripper.open()
+time.sleep(5)
 
-# spawn an object
-object_urdf_path = "/home/jovyan/workspace/assets/objects/cube/object.urdf"
-object_pose = Affine(translation=[0.5, 0, 0.1])
-object_id = bullet_client.loadURDF(
-    object_urdf_path,
-    object_pose.translation,
-    object_pose.quat,
-    flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+# close the gripper
+robot.gripper.close()
+time.sleep(5)
+# open the gripper
+robot.gripper.open()
+time.sleep(5)
+# close the gripper
+robot.gripper.close()
+time.sleep(5)
 
-# simulate the scene for 100 steps and wait for the object to settle
-for _ in range(100):
+# open the gripper
+robot.gripper.open()
+time.sleep(5)
+# close the gripper
+robot.gripper.close()
+time.sleep(5)
+
+# open the gripper
+robot.gripper.open()
+time.sleep(5)
+
+for _ in range(1000):
     bullet_client.stepSimulation()
     time.sleep(1 / 100)
-
-# get the current object pose
-position, quat = bullet_client.getBasePositionAndOrientation(object_id)
-object_pose = Affine(position, quat)
-print(object_pose)
-
-# close the simulation
-bullet_client.disconnect()

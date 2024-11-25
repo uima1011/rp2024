@@ -10,5 +10,5 @@ docker build \
   --build-arg RENDER="$RENDER" \
   --build-arg UID="$uid" \
   --build-arg GID="$gid" \
-  -f Dockerfile \
+  -f bullet.Dockerfile \
   -t rp2024/bullet .

@@ -119,7 +119,7 @@ class Affine:
         return Rotation.from_matrix(self.matrix[:3, :3]).as_euler('xyz')
 
     @property
-    def axis_angle(self):
+    def rotvec(self):
         """
         setter method for returning the rotation vector
         """
@@ -166,30 +166,3 @@ class Affine:
         steps = [Affine(t, r.as_quat()) for t, r in zip(t_steps, r_steps)]
         return steps
 
-
-if __name__ == '__main__':
-
-    a_1 = Affine(translation=(1, 1, 0), rotation=[0, 0, np.pi / 2])
-    a_2 = Affine(rotation=[0, 0, np.pi / 2])
-    a_4 = Affine(rotation=[0, 0, np.pi / 3])
-    print((a_2 * a_4).rpy)
-    print((a_2.invert() * a_4).rpy)
-    print((a_4 * a_2).rpy)
-    print((a_4.invert() * a_2).rpy)
-
-    a_3 = Affine(translation=(2, 0, 0))
-    print((a_2 * a_3).translation, (a_2 * a_3).rpy)
-    print((a_1 * a_3).translation, (a_1 * a_3).rpy)
-    print((a_3 * a_1).translation, (a_1 * a_3).rpy)
-    print((a_1 * a_2).translation, (a_1 * a_2).rpy)
-    print((a_1 * a_3.invert()).translation, (a_1 * a_3.invert()).rpy)
-    print((a_1 * a_2.invert()).translation, (a_1 * a_2.invert()).rpy)
-    for i in a_1.interpolate_to(a_2, 0.1):
-        print(i.translation, i.rpy)
-    for i in a_1.interpolate_to(a_3, 0.1):
-        print(i.translation, i.rpy)
-
-    a_5 = Affine(translation=(2, -1, 0))
-
-    print(a_1 / a_5)
-    print(a_5 / a_1)
