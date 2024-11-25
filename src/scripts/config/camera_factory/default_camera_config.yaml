@@ -15,3 +15,4 @@ camera_config:
   depth_range:
     - 0.1
     - 50.0
+  record_depth: true

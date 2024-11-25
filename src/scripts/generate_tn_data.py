@@ -5,9 +5,12 @@ import numpy as np
 from omegaconf import DictConfig
 from hydra.utils import instantiate
 import copy
+import cv2
 
 from bullet_env.util import setup_bullet_client, stdout_redirected
 from transform.affine import Affine
+
+from image_utils import draw_pose
 
 
 @hydra.main(version_base=None, config_path="config", config_name="tn_train_data")
@@ -33,15 +36,32 @@ def main(cfg: DictConfig) -> None:
         task = task_factory.create_task()
         task.setup(env, robot.robot_id)
         pose = oracle.solve(task)
-        action = Affine.from_matrix(pose)
-        pre_grasp_offset = Affine([0, 0, -0.1])
-        pre_grasp_pose = action * pre_grasp_offset
-        robot.ptp(pre_grasp_pose)
-        robot.lin(action)
-        robot.gripper.close()
-        robot.lin(pre_grasp_pose)
+        observations = [camera.get_observation() for camera in camera_factory.cameras]
+        if cfg.debug:
+            image_copy = copy.deepcopy(observations[0]['rgb'])
+            draw_pose(observations[0]['extrinsics'], pose, observations[0]['intrinsics'], image_copy)
+            cv2.imshow('rgb', image_copy)
+            depth_copy = copy.deepcopy(observations[0]['depth'])
+            # rescale for visualization
+            depth_copy = depth_copy / 2.0
+            cv2.imshow('depth', depth_copy)
+            key_pressed = cv2.waitKey(0)
+            if key_pressed == ord('q'):
+                break
+            env.spawn_coordinate_frame(pose)
+            action = Affine.from_matrix(pose)
+            pre_grasp_offset = Affine([0, 0, -0.1])
+            pre_grasp_pose = action * pre_grasp_offset
+            robot.ptp(pre_grasp_pose)
+            robot.lin(action)
+            robot.gripper.close()
+            robot.lin(pre_grasp_pose)
+            env.remove_coordinate_frames()
 
         task.clean(env)
+
+    with stdout_redirected():
+        bullet_client.disconnect()
 
 if __name__ == "__main__":
     main()

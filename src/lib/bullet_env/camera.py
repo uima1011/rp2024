@@ -66,12 +66,14 @@ def cvPose2BulletView(q, t):
 class BulletCamera:
     def __init__(self, bullet_client, pose_matrix, resolution=(640, 480),
                  intrinsics=(450, 0, 320, 0, 450, 240, 0, 0, 1),
-                 depth_range=(0.01, 10.0)):
+                 depth_range=(0.01, 10.0),
+                 record_depth=False):
         self.bullet_client = bullet_client
         self.pose = Affine.from_matrix(pose_matrix)
         self.resolution = resolution
         self.intrinsics = intrinsics
         self.depth_range = depth_range
+        self.record_depth = record_depth
         self.view_m = self.compute_view_matrix()
         # self.proj_m = self.compute_projection_matrix()
         self.proj_m = cvK2BulletP(np.reshape(self.intrinsics, (3, 3)), self.resolution[0], self.resolution[1], *self.depth_range)
@@ -94,7 +96,7 @@ class BulletCamera:
         return view_m
 
     def get_observation(self):
-        _, _, color, _, _ = self.bullet_client.getCameraImage(
+        _, _, color, depth, _ = self.bullet_client.getCameraImage(
             width=self.resolution[0],
             height=self.resolution[1],
             viewMatrix=self.view_m,
@@ -102,12 +104,14 @@ class BulletCamera:
             shadow=1,
             flags=p.ER_NO_SEGMENTATION_MASK,
             renderer=p.ER_BULLET_HARDWARE_OPENGL)
-
-        # TODO make key names consistent with other modules: pose or extrinsics
+        color = np.array(color).reshape(self.resolution[1], self.resolution[0], -1)[..., :3].astype(np.uint8)
         observation = {'rgb': color,
                        'extrinsics': self.pose.matrix,
                        'intrinsics': np.reshape(self.intrinsics, (3, 3)).astype(np.float32)}
-
+        if self.record_depth:
+            depth_buffer_opengl = np.reshape(depth, [self.resolution[1], self.resolution[0]])
+            depth_opengl = self.depth_range[1] * self.depth_range[0] / (self.depth_range[1] - (self.depth_range[1] - self.depth_range[0]) * depth_buffer_opengl)
+            observation['depth'] = depth_opengl
         return observation
 
 
@@ -128,7 +132,7 @@ class StaticCameraFactory(CameraFactory):
 
 
 class StaticPolarCameraFactory(CameraFactory):
-    def __init__(self, bullet_client, camera_config, radius, t_center, polar_angles, upside_down=True):
+    def __init__(self, bullet_client, camera_config, radius, t_center, polar_angles, upside_down=False):
         self.bullet_client = bullet_client
         poses = [Affine.polar(pose[0], pose[1], radius, t_center) for pose in polar_angles]
         if upside_down:
@@ -150,7 +154,7 @@ class PolarCameraFactory(CameraFactory):
                  min_polar=np.pi / 6,
                  max_polar=np.pi / 3,
                  radius=0.8,
-                 upside_down=True):
+                 upside_down=False):
         self.bullet_client = bullet_client
         self.camera_config = camera_config
         self.t_center = t_center
