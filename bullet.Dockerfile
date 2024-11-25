@@ -67,6 +67,7 @@ RUN pip install --no-cache-dir pybullet
 RUN pip install --no-cache-dir loguru
 RUN pip install --no-cache-dir scipy
 RUN pip install --no-cache-dir hydra-core omegaconf
+RUN pip install --no-cache-dir h5py
 
 ENV PYTHONPATH=/home/$USER/workspace/src/lib:$PYTHONPATH
 

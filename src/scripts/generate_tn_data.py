@@ -10,7 +10,8 @@ import cv2
 from bullet_env.util import setup_bullet_client, stdout_redirected
 from transform.affine import Affine
 
-from image_utils import draw_pose
+from image_util import draw_pose
+from data_util import store_data_grasp
 
 
 @hydra.main(version_base=None, config_path="config", config_name="tn_train_data")
@@ -34,9 +35,12 @@ def main(cfg: DictConfig) -> None:
         robot.home()
         robot.gripper.open()
         task = task_factory.create_task()
-        task.setup(env, robot.robot_id)
+        task.setup(env)
+        task_info = task.get_info()
         pose = oracle.solve(task)
         observations = [camera.get_observation() for camera in camera_factory.cameras]
+        if cfg.store_dataset:
+            store_data_grasp(i, task_info, observations, pose, cfg.dataset_directory)
         if cfg.debug:
             image_copy = copy.deepcopy(observations[0]['rgb'])
             draw_pose(observations[0]['extrinsics'], pose, observations[0]['intrinsics'], image_copy)

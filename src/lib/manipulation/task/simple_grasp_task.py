@@ -124,7 +124,7 @@ class GraspTask:
                 return o
         raise RuntimeError('object id mismatch')
 
-    def setup(self, env, robot_id):
+    def setup(self, env):
         for o in self.grasp_objects:
             new_object_id = env.add_object(o)
             o.object_id = new_object_id
