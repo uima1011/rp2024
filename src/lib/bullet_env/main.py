@@ -6,7 +6,7 @@ from bullet_env.ur10_cell import UR10Cell
 from transform.affine import Affine
 
 RENDER = True
-URDF_PATH = "/home/jovyan/workspace/assets/urdf/robot.urdf"
+URDF_PATH = "/home/jovyan/data/assets/urdf/robot.urdf"
 
 bullet_client = BulletClient(connection_mode=p.GUI)
 bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)

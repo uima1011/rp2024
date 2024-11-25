@@ -1,7 +1,6 @@
 import sys
 import hydra
 from loguru import logger
-import numpy as np
 from omegaconf import DictConfig
 from hydra.utils import instantiate
 import cv2
