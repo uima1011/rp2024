@@ -40,5 +40,8 @@ for _ in range(100):
 # also, make sure that before grasping the gripper is open
 # consider adding a pre-grasp pose to ensure the object is grasped correctly without collision during approach
 
+# wait for key press
+input("Press Enter to continue...")
+
 # close the simulation
 bullet_client.disconnect()
