@@ -6,6 +6,10 @@ from pybullet_utils.bullet_client import BulletClient
 from bullet_env.bullet_robot import BulletRobot
 from transform import Affine
 
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
+import gym
+
 # setup
 RENDER = True
 URDF_PATH = "/home/jovyan/workspace/assets/urdf/robot_without_gripper.urdf"
@@ -152,41 +156,80 @@ def start_pose():
     target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.6])
     robot.lin(target_pose)
 
+def get_state(object_ids):
+    # Sammle die Positionen der Objekte
+    object_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id in object_ids]
+    # Sammle die Position des Roboters
+    robot_pose = robot.get_eef_pose().translation
+    # Kombiniere diese Informationen
+    state = np.concatenate([robot_pose, np.array(object_positions).flatten()])
+    return state
+
+def perform_action(action):
+    if action == 0:  # Nach links schieben
+        move_left()
+    elif action == 1:  # Nach rechts schieben
+        move_right()
+    elif action == 2:  # Nach vorne schieben
+        move_forward()
+    elif action == 3:  # Nach hinten schieben
+        move_backward()
+
+def all_objects_sorted(object_ids, target_colors, target_positions):
+    # Prüfe, ob alle Objekte sortiert sind
+    return all([bullet_client.getBasePositionAndOrientation(obj_id)[0] == target_positions[target_color] for obj_id, target_color in zip(object_ids, target_colors)])
+
+def compute_reward(object_ids, target_colors, target_positions):
+    reward = 0
+    for obj_id, target_color in zip(object_ids, target_colors):
+        obj_pos = bullet_client.getBasePositionAndOrientation(obj_id)[0]
+        target_pos = target_positions[target_color]
+        distance = np.linalg.norm(np.array(obj_pos) - np.array(target_pos))
+        reward -= distance  # Strafe für Entfernung
+    if all_objects_sorted(object_ids, target_colors, target_positions):  # Prüfe, ob alle Objekte sortiert sind
+        reward += 100  # Große Belohnung für das Lösen der Aufgabe
+    return reward
 
 
+# Environment erstellen
+class PushingEnv(gym.Env):
+    def __init__(self):
+        super().__init__()
+        self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,))
+    
+    def reset(self):
+        bullet_client.resetSimulation()
+        spawn_objects()
+        return get_state()
+    
+    def step(self, action):
+        perform_action(action)
+        reward = compute_reward()
+        done = all_objects_sorted()  # Aufgabe abgeschlossen
+        return get_state(), reward, done, {}
 
+# Training
+''' 
+env = DummyVecEnv([lambda: PushingEnv()])
+
+# Training mit PPO
+model = PPO("MlpPolicy", env, verbose=1)
+model.learn(total_timesteps=100000)
+
+# Speichern und Testen
+model.save("pushing_policy")
+'''
 
 def main():
 
     ids = spawn_objects()
 
-    
-
     # implement pushing the object
     # keep in mind, that the object pose is defined in the world frame, and the eef points downwards
 
-    # home pos: [0.69137079 0.1741478  0.47682923] [ 7.07106601e-01  7.07106959e-01 -4.75657114e-05 -3.24074868e-05]
-    
     start_pose()
-
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-
-    current_pose = robot.get_eef_pose()
-    print("Pose: ", current_pose)
-
+    print("Pose: ", robot.get_eef_pose())
 
     # wait for key press
     input("Press Enter to continue...")
