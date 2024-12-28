@@ -1,35 +1,24 @@
-# Robot programming HKA WS 2024
+# Sorting via Pushing
+The workspace contains multiple objects of two different colors and areas corresponding to those colors. The task is for the robot to push all objects to their corresponding colored areas. The objects can be of different shapes, and the areas should be simple squares with colored borders able to fit all required objects. The objects and the areas should be placed randomly.
 
-This repository contains the code for the robot programming course (the policy learning part) at the University of Applied Sciences Karlsruhe.
+<figure>
+<img src="project/block_push.gif" alt="exampleReplaceWithOurVideo" width="300"/>
+<figcaption>https://diffusion-policy.cs.columbia.edu/</figcaption>
+</figure>
 
-We will use and update this repository throughout the course. Hello.
+view full Task under ``project\rp_Project_Assignment.pdf``
 
-## Quick start
+## Setup environment
+In `build_image.sh` choose between
+* with graphics-card: `RENDER=nvidia`
+* without graphics-card: `RENDER=base`
 
-### Environment setup
+In `run_container.sh` choose between
+* with graphics-card: add line: `--gpus all \`
+* without graphics-card: remove line: `--gpus all \`
 
-**Requirements:** have docker installed including the post-installation steps.
-
-**Note:** The default settings are for nvidia GPU support. If you don't have an nvidia GPU, open up `build_image.sh` and set the `render` argument to `base`. Also, remove the `--gpus all` flag from the `docker run` command in `run_container.sh`.
-
-Build the docker image with
-
-```bash
-./build_image.sh
-```
-
-Run the container with
-```bash
-./run_container.sh
-```
-
-Check whether you can open a window from the container by running
-```bash
-python view_noise_image.py
-```
-A window should pop up showing a random noise image. You can close it by pressing any key, while the window is focused.
-
-### Basics
-Check out the `basics.py` script to get familiar with the API we use and the `Affine` class.
-
-If you want to understand a bit more how everything works under the hood, check out the scripts in the `bullet_env` folder as well as the `transform.py` file.
+## Run project
+in terminal:
+* `./build_image.sh`
+* `./run_container.sh`
+* `python ./difficult_task.py`
