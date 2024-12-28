@@ -12,7 +12,7 @@
   <link name="top_border">
     <visual>
       <geometry>
-        <box size="0.06 0.001 0.001"/>
+        <box size="0.16 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -24,7 +24,7 @@
   <link name="bottom_border">
     <visual>
       <geometry>
-        <box size="0.06 0.001 0.001"/>
+        <box size="0.16 0.001 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -36,7 +36,7 @@
   <link name="left_border">
     <visual>
       <geometry>
-        <box size="0.001 0.062 0.001"/>
+        <box size="0.001 0.162 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -48,7 +48,7 @@
   <link name="right_border">
     <visual>
       <geometry>
-        <box size="0.001 0.062 0.001"/>
+        <box size="0.001 0.162 0.001"/>
       </geometry>
       <material name="red"/>
     </visual>
@@ -60,21 +60,21 @@
   <joint name="top_border_joint" type="fixed">
     <parent link="base_link"/>
     <child link="top_border"/>
-    <origin xyz="0 0.0305 0" rpy="0 0 0"/>
+    <origin xyz="0 0.0805 0" rpy="0 0 0"/>
   </joint>
   <joint name="bottom_border_joint" type="fixed">
     <parent link="base_link"/>
     <child link="bottom_border"/>
-    <origin xyz="0 -0.0305 0" rpy="0 0 0"/>
+    <origin xyz="0 -0.0805 0" rpy="0 0 0"/>
   </joint>
   <joint name="left_border_joint" type="fixed">
     <parent link="base_link"/>
     <child link="left_border"/>
-    <origin xyz="-0.0305 0 0" rpy="0 0 0"/>
+    <origin xyz="-0.0805 0 0" rpy="0 0 0"/>
   </joint>
   <joint name="right_border_joint" type="fixed">
     <parent link="base_link"/>
     <child link="right_border"/>
-    <origin xyz="0.0305 0 0" rpy="0 0 0"/>
+    <origin xyz="0.0805 0 0" rpy="0 0 0"/>
   </joint>
 </robot>
