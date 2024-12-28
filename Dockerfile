@@ -44,7 +44,7 @@ FROM render-${RENDER} as user
 RUN apt-get update && apt-get install -y sudo
 
 # Create user
-ARG USER=jovyan
+ARG USER=group1
 ARG PASSWORD=automaton
 ARG UID=1000
 ARG GID=1000
@@ -66,7 +66,7 @@ RUN pip install --no-cache-dir numpy opencv-python opencv-contrib-python
 RUN pip install --no-cache-dir --timeout=600 pybullet
 RUN pip install --no-cache-dir loguru
 RUN pip install --no-cache-dir scipy
-RUN pip install --no-cache-dir stable-baselines3
+RUN pip install --no-cache-dir --timeout=10000  stable-baselines3
 RUN pip install --no-cache-dir gym
 
 ENV PYTHONPATH=/home/$USER/workspace/src:$PYTHONPATH
