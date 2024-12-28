@@ -10,7 +10,7 @@ import gym
 
 # Setup
 RENDER = True
-URDF_PATH = "/home/jovyan/workspace/assets/urdf/robot_without_gripper.urdf"
+URDF_PATH = "/home/group1/workspace/assets/urdf/robot_without_gripper.urdf"
 
 bullet_client = BulletClient(connection_mode=p.GUI)
 bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
@@ -26,82 +26,170 @@ robot.home()
 class PushingEnv(gym.Env):
     def __init__(self):
         super().__init__()
+        self.tableCords = {
+                            'x':[0.3, 0.9], # min, max
+                            'y':[-0.29, 0.29]
+                          }
+        self.goal_width = {
+                            'x': 0.05 + 0.01, # min_size_object + offset
+                            'y': 0.05 + 0.01
+                          }     
         self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
-        self.object_ids = []
+
         self.object_ids = []
         self.target_colors = []
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
 
-    
-    def spawn_objects(self):
-        self.object_ids = []  # Initialisiere die Liste der Objekt-IDs
-        num_red_cube = np.random.randint(1, 4)
-        num_green_cube = np.random.randint(1, 4)
-        num_red_plus = np.random.randint(1, 4)
-        num_green_plus = np.random.randint(1, 4)
+    def check_rectangle_overlap(self, rect1, rect2):
+        """
+        Check if two rectangles overlap.
+        Each rectangle is defined by (x_min, y_min, x_max, y_max)
+        """
+        # If one rectangle is on the left side of the other
+        if rect1[2] < rect2[0] or rect2[2] < rect1[0]:
+            return False
+        # If one rectangle is above the other
+        if rect1[3] < rect2[1] or rect2[3] < rect1[1]:
+            return False
+        return True
 
-        for i in range(num_red_cube):
-            red_cube_urdf_path = "/home/jovyan/workspace/assets/objects/cube_red.urdf"
-            x_r = np.random.uniform(0.3, 0.9)
-            y_r = np.random.uniform(-0.29, 0.29)
-            z_r = 0.1
-            red_cube_pose = Affine(translation=[x_r, y_r, z_r])
-            obj_id = bullet_client.loadURDF(
-                red_cube_urdf_path,
-                red_cube_pose.translation,
-                red_cube_pose.quat,
-                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
-            self.object_ids.append(obj_id)
+    def generate_single_goal_area(self, table_coords, goal_width):
+        """Generate coordinates for a single goal area"""
+        x_goal_min = np.random.uniform(table_coords['x'][0], table_coords['x'][1] - goal_width['x'])
+        y_goal_min = np.random.uniform(table_coords['y'][0], table_coords['y'][1] - goal_width['y'])
+        x_goal_max = x_goal_min + goal_width['x']
+        y_goal_max = y_goal_min + goal_width['y']
+        
+        return (x_goal_min, y_goal_min, x_goal_max, y_goal_max)
 
-        for i in range(num_green_cube):
-            green_cube_urdf_path = "/home/jovyan/workspace/assets/objects/cube_green.urdf"
-            x_g = np.random.uniform(0.3, 0.9)
-            y_g = np.random.uniform(-0.29, 0.29)
-            z_g = 0.1
-            green_cube_pose = Affine(translation=[x_g, y_g, z_g])
-            obj_id = bullet_client.loadURDF(
-                green_cube_urdf_path,
-                green_cube_pose.translation,
-                green_cube_pose.quat,
-                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
-            self.object_ids.append(obj_id)
+    def generate_goal_pose(self, goal_coords, z_goal):
+        """Generate pose for a goal area"""
+        x_goal_min, y_goal_min, x_goal_max, y_goal_max = goal_coords
+        mid_x = (x_goal_max - x_goal_min) / 2 + x_goal_min
+        mid_y = (y_goal_max - y_goal_min) / 2 + y_goal_min
+        
+        translation = [mid_x, mid_y, z_goal]
+        rotation = [0, 0, np.random.uniform(0, 2*np.pi)]  # around z axis
+        return Affine(translation, rotation)
 
-        for i in range(num_red_plus):
-            red_plus_urdf_path = "/home/jovyan/workspace/assets/objects/plus_red.urdf"
-            x_r = np.random.uniform(0.3, 0.9)
-            y_r = np.random.uniform(-0.29, 0.29)
-            z_r = 0.1
-            red_plus_pose = Affine(translation=[x_r, y_r, z_r])
-            obj_id = bullet_client.loadURDF(
-                red_plus_urdf_path,
-                red_plus_pose.translation,
-                red_plus_pose.quat,
-                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
-            self.object_ids.append(obj_id)
-
-        for i in range(num_green_plus):
-            green_plus_urdf_path = "/home/jovyan/workspace/assets/objects/plus_green.urdf"
-            x_g = np.random.uniform(0.3, 0.9)
-            y_g = np.random.uniform(-0.29, 0.29)
-            z_g = 0.1
-            green_plus_pose = Affine(translation=[x_g, y_g, z_g])
-            obj_id = bullet_client.loadURDF(
-                green_plus_urdf_path,
-                green_plus_pose.translation,
-                green_plus_pose.quat,
-                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
-            self.object_ids.append(obj_id)
+    def generateGoalAreas(self, colours=['red', 'green'], max_attempts=100):
+        """
+        Generate two non-overlapping goal areas.
+        Returns False if unable to generate non-overlapping areas after max_attempts.
+        """
+        z_goal = -0.01
+        
+        for attempt in range(max_attempts):
+            # Generate first goal area
+            goal1_coords = self.generate_single_goal_area(self.tableCords, self.goal_width)
+            # Generate second goal area
+            goal2_coords = self.generate_single_goal_area(self.tableCords, self.goal_width)
             
+            # Check if they overlap
+            if not self.check_rectangle_overlap(goal1_coords, goal2_coords):
+                # Generate poses for both goals
+                goal1_pose = self.generate_goal_pose(goal1_coords, z_goal)
+                goal2_pose = self.generate_goal_pose(goal2_coords, z_goal)
+                
+                # Print goal areas
+                print(f"Goal area 1: {goal1_coords}")
+                print(f"Goal area 2: {goal2_coords}")
+                
+                # Load URDFs
+                for coords, pose, colour in zip([goal1_coords, goal2_coords], 
+                                            [goal1_pose, goal2_pose], 
+                                            colours):
+                    urdf_path = f"/home/group1/workspace/assets/objects/goals/goal_{colour}.urdf"
+                    bullet_client.loadURDF(
+                        urdf_path,
+                        pose.translation,
+                        pose.quat,
+                        flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES
+                    )
+                return True
+                
+        print("Failed to generate non-overlapping goal areas after", max_attempts, "attempts")
+        return False
+
+
+    def check_collision(self, pos1, other_positions, min_distance=0.1):
+        """
+        Check if a position is too close to any existing positions
+        Args:
+            pos1: [x, y, z] position to check
+            other_positions: list of existing [[x, y, z], ...] positions
+            min_distance: minimum allowed distance between objects
+        Returns:
+            bool: True if collision detected, False otherwise
+        """
+        for pos2 in other_positions:
+            distance = np.sqrt(sum((p1 - p2) ** 2 for p1, p2 in zip(pos1[:2], pos2[:2])))  # Only check x,y
+            if distance < min_distance:
+                return True
+        return False
+
+    def generate_valid_position(self, existing_positions, min_distance=0.1, max_attempts=100):
+        """Generate a random position that doesn't collide with existing objects"""
+        for _ in range(max_attempts):
+            x = np.random.uniform(0.3, 0.9)
+            y = np.random.uniform(-0.29, 0.29)
+            z = 0.1
+            
+            if not self.check_collision([x, y, z], existing_positions, min_distance):
+                return [x, y, z]
+        return None
+
+    def spawn_single_object(self, urdf_path, bullet_client, existing_positions):
+        """Spawn a single object at a random position avoiding collisions"""
+        position = self.generate_valid_position(existing_positions)
+        if position == None:
+            return None
+        existing_positions.append(position) #add to list of positions
+        
+        pose = Affine(translation = position)
+        
+        return bullet_client.loadURDF(
+            urdf_path,
+            pose.translation,
+            pose.quat,
+            flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES
+        )
+
+    def spawn_objects(self, bullet_client, folders, objects, colours, maxObjCount):
+        """Spawn random numbers of cubes and plus signs in different colors with collision checking"""
+        existing_positions = []
+        # Define object configurations
+        base_path = "/home/group1/workspace/assets/objects/"
+        object_ids = {'cube_red': [], 'cube_green': [], 'plus_red': [], 'plus_green': []} # init with empty lists
+        for folder, obj in zip(folders, objects):
+            for col in colours:
+                objName = obj + '_' + col
+                path = base_path + folder + f'/{objName}.urdf'
+                objCount = np.random.randint(1, maxObjCount)
+                for _ in range(objCount):
+                    objID = self.spawn_single_object(path, bullet_client, existing_positions)
+                    if objID is not None:
+                        object_ids[objName].append(objID)
+                    else:
+                        print(f"Warning: Could not place {objName} - skipping remaining objects of this type")
+                        break 
+        
+        # Let objects settle
+        for _ in range(100):
+            bullet_client.stepSimulation()
+            time.sleep(1/100)
+        
+        # TODO implement correct:
         # Hier Zielbereiche und andere IDs speichern
         #self.target_colors = ["red"] * len(red_cube_id) + ["green"] * len(green_cube_id)  # Beispiel
         self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
         self.state_dim = 3 * len(self.object_ids) + 3
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
-        return self.object_ids
-
+        # Return IDs in the same format as original function
+        return self.object_ids # TODO check if order rly is same
 
     def get_state(self):
         object_positions = [
@@ -145,7 +233,8 @@ class PushingEnv(gym.Env):
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
         robot.home()
-        self.spawn_objects()
+        maxObjCount = 4
+        self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         return self.get_state()
 
     def step(self, action):
