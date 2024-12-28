@@ -35,12 +35,16 @@ class PushingEnv(gym.Env):
                             'y': 0.05 + 0.01
                           }     
         self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8aa5c46e3dc2a3d614ddb9e3eef3621c1fdbaf5c
         self.object_ids = []
         self.target_colors = []
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
+<<<<<<< HEAD
 
     def check_rectangle_overlap(self, rect1, rect2):
         """
@@ -136,6 +140,67 @@ class PushingEnv(gym.Env):
             x = np.random.uniform(0.3, 0.9)
             y = np.random.uniform(-0.29, 0.29)
             z = 0.1
+=======
+    
+    def spawn_objects(self):
+        self.object_ids = []  # Initialisiere die Liste der Objekt-IDs
+        num_red_cube = np.random.randint(0, 4)
+        num_green_cube = np.random.randint(0, 4)
+        num_red_plus = np.random.randint(0, 4)
+        num_green_plus = np.random.randint(0, 4)
+
+        for i in range(num_red_cube):
+            red_cube_urdf_path = "/home/jovyan/workspace/assets/objects/cube_red.urdf"
+            x_r = np.random.uniform(0.3, 0.9)
+            y_r = np.random.uniform(-0.29, 0.29)
+            z_r = 0.1
+            red_cube_pose = Affine(translation=[x_r, y_r, z_r])
+            obj_id = bullet_client.loadURDF(
+                red_cube_urdf_path,
+                red_cube_pose.translation,
+                red_cube_pose.quat,
+                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+            self.object_ids.append(obj_id)
+
+        for i in range(num_green_cube):
+            green_cube_urdf_path = "/home/jovyan/workspace/assets/objects/cube_green.urdf"
+            x_g = np.random.uniform(0.3, 0.9)
+            y_g = np.random.uniform(-0.29, 0.29)
+            z_g = 0.1
+            green_cube_pose = Affine(translation=[x_g, y_g, z_g])
+            obj_id = bullet_client.loadURDF(
+                green_cube_urdf_path,
+                green_cube_pose.translation,
+                green_cube_pose.quat,
+                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+            self.object_ids.append(obj_id)
+
+        for i in range(num_red_plus):
+            red_plus_urdf_path = "/home/jovyan/workspace/assets/objects/plus_red.urdf"
+            x_r = np.random.uniform(0.3, 0.9)
+            y_r = np.random.uniform(-0.29, 0.29)
+            z_r = 0.1
+            red_plus_pose = Affine(translation=[x_r, y_r, z_r])
+            obj_id = bullet_client.loadURDF(
+                red_plus_urdf_path,
+                red_plus_pose.translation,
+                red_plus_pose.quat,
+                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+            self.object_ids.append(obj_id)
+
+        for i in range(num_green_plus):
+            green_plus_urdf_path = "/home/jovyan/workspace/assets/objects/plus_green.urdf"
+            x_g = np.random.uniform(0.3, 0.9)
+            y_g = np.random.uniform(-0.29, 0.29)
+            z_g = 0.1
+            green_plus_pose = Affine(translation=[x_g, y_g, z_g])
+            obj_id = bullet_client.loadURDF(
+                green_plus_urdf_path,
+                green_plus_pose.translation,
+                green_plus_pose.quat,
+                flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+            self.object_ids.append(obj_id)
+>>>>>>> 8aa5c46e3dc2a3d614ddb9e3eef3621c1fdbaf5c
             
             if not self.check_collision([x, y, z], existing_positions, min_distance):
                 return [x, y, z]
@@ -183,22 +248,35 @@ class PushingEnv(gym.Env):
         
         # TODO implement correct:
         # Hier Zielbereiche und andere IDs speichern
-        #self.target_colors = ["red"] * len(red_cube_id) + ["green"] * len(green_cube_id)  # Beispiel
-        self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
-        self.state_dim = 3 * len(self.object_ids) + 3
+        self.target_colors = ["red"] * num_red_cube + ["green"] * num_green_cube + ["red"] * num_red_plus + ["green"] * (num_green_plus)
+        self.state_dim = 3 * len(self.object_ids) + 3 # + 6 (2 mal x,y,angle) target positions
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
+<<<<<<< HEAD
         # Return IDs in the same format as original function
         return self.object_ids # TODO check if order rly is same
+=======
+        # simulate the scene for 100 steps and wait for the object to settle
+        for _ in range(100):
+            bullet_client.stepSimulation()
+            time.sleep(1 / 100)
+
+        return self.object_ids
+    
+    # self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
+
+
+>>>>>>> 8aa5c46e3dc2a3d614ddb9e3eef3621c1fdbaf5c
 
     def get_state(self):
         object_positions = [
             bullet_client.getBasePositionAndOrientation(obj_id)[0]
             for obj_id in self.object_ids
         ]
+        # todo goal positions
         robot_pose = robot.get_eef_pose()
-        robot_pose = robot_pose.translation
-        return np.concatenate([robot_pose, np.array(object_positions).flatten()])
+        robot_position = robot_pose.translation
+        return np.concatenate([robot_position, np.array(object_positions).flatten()])
 
     def perform_action(self, action):
         if action == 0:
@@ -284,6 +362,7 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
+    print("State:", env.get_state())
     input("Press Enter to continue...")
     bullet_client.disconnect()
 
