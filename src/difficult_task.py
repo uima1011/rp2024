@@ -135,6 +135,9 @@ class PushingEnv(gym.Env):
             x = np.random.uniform(0.3, 0.9)
             y = np.random.uniform(-0.29, 0.29)
             z = 0.1
+            if not self.check_collision([x, y, z], existing_positions, min_distance):
+                return [x, y, z]
+        return None
     
     def spawn_single_object(self, urdf_path, bullet_client, existing_positions):
         """Spawn a single object at a random position avoiding collisions"""
