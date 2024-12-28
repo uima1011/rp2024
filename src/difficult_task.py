@@ -232,6 +232,8 @@ class PushingEnv(gym.Env):
             reward -= distance
         if self.all_objects_sorted():
             reward += 100
+        reward -= 0.01 * self.robot.get_distance_moved()  # Strafe für ineffiziente Bewegungen
+        reward -= 10 * self.robot.check_collisions()  # Kollisionen bestrafen
         return reward
 
     def reset(self):
