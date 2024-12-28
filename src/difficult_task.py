@@ -93,9 +93,8 @@ class PushingEnv(gym.Env):
             self.object_ids.append(obj_id)
             
         # Hier Zielbereiche und andere IDs speichern
-        #self.target_colors = ["red"] * len(red_cube_id) + ["green"] * len(green_cube_id)  # Beispiel
-        self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
-        self.state_dim = 3 * len(self.object_ids) + 3
+        self.target_colors = ["red"] * num_red_cube + ["green"] * num_green_cube + ["red"] * num_red_plus + ["green"] * (num_green_plus)
+        self.state_dim = 3 * len(self.object_ids) + 3 # + 6 (2 mal x,y,angle) target positions
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
         # simulate the scene for 100 steps and wait for the object to settle
@@ -104,6 +103,9 @@ class PushingEnv(gym.Env):
             time.sleep(1 / 100)
 
         return self.object_ids
+    
+    # self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
+
 
 
     def get_state(self):
@@ -111,6 +113,7 @@ class PushingEnv(gym.Env):
             bullet_client.getBasePositionAndOrientation(obj_id)[0]
             for obj_id in self.object_ids
         ]
+        # todo goal positions
         robot_pose = robot.get_eef_pose()
         robot_position = robot_pose.translation
         return np.concatenate([robot_position, np.array(object_positions).flatten()])
