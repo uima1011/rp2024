@@ -28,19 +28,17 @@ class PushingEnv(gym.Env):
         super().__init__()
         self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
         self.object_ids = []
-        self.object_ids = []
         self.target_colors = []
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
-
     
     def spawn_objects(self):
         self.object_ids = []  # Initialisiere die Liste der Objekt-IDs
-        num_red_cube = np.random.randint(1, 4)
-        num_green_cube = np.random.randint(1, 4)
-        num_red_plus = np.random.randint(1, 4)
-        num_green_plus = np.random.randint(1, 4)
+        num_red_cube = np.random.randint(0, 4)
+        num_green_cube = np.random.randint(0, 4)
+        num_red_plus = np.random.randint(0, 4)
+        num_green_plus = np.random.randint(0, 4)
 
         for i in range(num_red_cube):
             red_cube_urdf_path = "/home/jovyan/workspace/assets/objects/cube_red.urdf"
@@ -100,6 +98,11 @@ class PushingEnv(gym.Env):
         self.state_dim = 3 * len(self.object_ids) + 3
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
+        # simulate the scene for 100 steps and wait for the object to settle
+        for _ in range(100):
+            bullet_client.stepSimulation()
+            time.sleep(1 / 100)
+
         return self.object_ids
 
 
@@ -109,8 +112,8 @@ class PushingEnv(gym.Env):
             for obj_id in self.object_ids
         ]
         robot_pose = robot.get_eef_pose()
-        robot_pose = robot_pose.translation
-        return np.concatenate([robot_pose, np.array(object_positions).flatten()])
+        robot_position = robot_pose.translation
+        return np.concatenate([robot_position, np.array(object_positions).flatten()])
 
     def perform_action(self, action):
         if action == 0:
@@ -194,6 +197,7 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
+    print("State:", env.get_state())
     input("Press Enter to continue...")
     bullet_client.disconnect()
 
