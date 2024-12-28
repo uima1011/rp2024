@@ -147,8 +147,8 @@ class PushingEnv(gym.Env):
         if position == None:
             return None
         existing_positions.append(position) #add to list of positions
-        
-        pose = Affine(translation = position)
+        angle = np.random.uniform(0, 2*np.pi)
+        pose = Affine(translation = position, rotation=(0, 0, angle))
         
         return bullet_client.loadURDF(
             urdf_path,
@@ -235,6 +235,7 @@ class PushingEnv(gym.Env):
         robot.home()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
+        self.generateGoalAreas()
         return self.get_state()
 
     def step(self, action):
