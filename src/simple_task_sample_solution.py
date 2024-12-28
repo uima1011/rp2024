@@ -9,7 +9,7 @@ from transform import Affine
 
 # setup
 RENDER = True
-URDF_PATH = "/home/jovyan/workspace/assets/urdf/robot.urdf"
+URDF_PATH = "/home/group1/workspace/assets/urdf/robot.urdf"
 
 bullet_client = BulletClient(connection_mode=p.GUI)
 bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
@@ -49,7 +49,7 @@ gripper.open()
 gripper.close()
 
 # spawn an object
-object_urdf_path = "/home/jovyan/workspace/assets/objects/cube/object.urdf"
+object_urdf_path = "/home/group1/workspace/assets/objects/cube/object.urdf"
 object_pose = Affine(translation=[0.5, 0, 0.1])
 object_id = bullet_client.loadURDF(
     object_urdf_path,
