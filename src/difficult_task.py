@@ -31,12 +31,11 @@ class PushingEnv(gym.Env):
                             'y':[-0.29, 0.29]
                           }
         self.goal_width = {
-                            'x': 0.05 + 0.01, # min_size_object + offset
-                            'y': 0.05 + 0.01
+                            'x': 0.15 + 0.01, # min_size_object + offset
+                            'y': 0.15 + 0.01
                           }     
         self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
         self.object_ids = []
-        self.target_colors = []
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
@@ -179,10 +178,7 @@ class PushingEnv(gym.Env):
             bullet_client.stepSimulation()
             time.sleep(1/100)
         
-        # TODO implement correct:
         # Hier Zielbereiche und andere IDs speichern
-        num_red_cube,  num_green_cube,  num_red_plus, num_green_plus = 4,4,4,4 # TODO
-        self.target_colors = ["red"] * num_red_cube + ["green"] * num_green_cube + ["red"] * num_red_plus + ["green"] * (num_green_plus)
         self.state_dim = 3 * len(self.object_ids) + 3 # + 6 (2 mal x,y,angle) target positions
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
@@ -215,25 +211,16 @@ class PushingEnv(gym.Env):
         elif action == 3:
             move_backward()
 
-    def all_objects_sorted(self):
-        return all(
-            [
-                bullet_client.getBasePositionAndOrientation(obj_id)[0] == self.target_positions[target_color]
-                for obj_id, target_color in zip(self.object_ids, self.target_colors)
-            ]
-        )
-
-    def compute_reward(self):
+    def compute_reward(self): # TODO check if function is working / fix
         reward = 0
         for obj_id, target_color in zip(self.object_ids, self.target_colors):
             obj_pos = bullet_client.getBasePositionAndOrientation(obj_id)[0]
             target_pos = self.target_positions[target_color]
             distance = np.linalg.norm(np.array(obj_pos) - np.array(target_pos))
             reward -= distance
-        if self.all_objects_sorted():
+        if False # TODO if no nearest object do...
             reward += 100
-        reward -= 0.01 * self.robot.get_distance_moved()  # Strafe für ineffiziente Bewegungen
-        reward -= 10 * self.robot.check_collisions()  # Kollisionen bestrafen
+        # implement more rewards
         return reward
 
     def reset(self):
@@ -248,7 +235,8 @@ class PushingEnv(gym.Env):
     def step(self, action):
         self.perform_action(action)
         reward = self.compute_reward()
-        done = self.all_objects_sorted()
+        # implement finish state:
+        done = False # if true --> break
         return self.get_state(), reward, done, {}
 
 # Funktionen für Bewegungen
