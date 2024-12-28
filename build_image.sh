@@ -2,7 +2,7 @@
 ##############################################################################
 ##                            Build the image                               ##
 ##############################################################################
-RENDER=base
+RENDER=nvidia
 
 uid=$(eval "id -u")
 gid=$(eval "id -g")
@@ -11,4 +11,4 @@ docker build \
   --build-arg UID="$uid" \
   --build-arg GID="$gid" \
   -f Dockerfile \
-  -t rp2024/bullet .
+  -t rp2024/sorting-via-pushing .
