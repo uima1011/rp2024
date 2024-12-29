@@ -7,6 +7,7 @@ from transform import Affine
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 import gymnasium as gym
+import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
 import json
 
@@ -259,9 +260,8 @@ class PushingEnv(gym.Env):
         # implement more rewards
         return reward
 
-    def reset(self, seed=None):
-        if seed is not None:
-            np.random.seed(seed)
+    def reset(self, seed = None):
+        super().reset(seed=seed)
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
         robot.home()
@@ -282,12 +282,12 @@ class PushingEnv(gym.Env):
 
     def log_step(self, action, reward, state, done):
         log_entry = {
-            "Episode": self.episode,
-            "Step": self.step_count,
-            "Action": action,
-            "Reward": reward,
-            "State": state.tolist(),  # Convert state to list if it's a numpy array
-            "Done": done
+            "Episode": int(self.episode),
+            "Step": int(self.step_count),
+            "Action": int(action),
+            "Reward": int(reward),
+            "State": state.tolist() if isinstance(reward, np.ndarray) else float(reward),  # Convert state to list if it's a numpy array
+            "Done": bool(done)
         }
         self.log_data.append(log_entry)
         with open(self.log_path, mode='w') as file:
@@ -296,7 +296,7 @@ class PushingEnv(gym.Env):
 
     def step(self, action):
         self.perform_action(action)
-        reward = self.compute_reward()
+        reward = np.random.uniform([-1000, 1000]) #self.compute_reward() # TODO: for testing, uncomment reward function later
         done = False 
         # if(getNearestObjectRobot()==None):
         #   done = True
@@ -307,16 +307,16 @@ class PushingEnv(gym.Env):
         self.log_step(action, reward, state, done)
         return state, reward, done, {}
     
-def train(env):
+def train(environment):
     # Umgebung erstellen
-    env = DummyVecEnv([lambda: env])
+    env = DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
     model = PPO("MlpPolicy", env, verbose=1)
 
     # Training starten
     print("Training beginnt...")
-    model.learn(total_timesteps=100000)  # Anzahl der Trainingsschritte
+    model.learn(total_timesteps=10)  # Anzahl der Trainingsschritte
 
     # Modell speichern
     model.save("pushing_policy")
@@ -377,8 +377,9 @@ def main():
     # print("State dimension:", env.state_dim)
     # print(len(env.get_state()))
     # print(env.get_state())
-    # print(env.state_dim)
-    env.log_step(1, 1000, env.get_state(), False)
+    print(env.state_dim)
+    print(env.observation_space)
+    #env.log_step(1, 1000, env.get_state(), False)
     train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
