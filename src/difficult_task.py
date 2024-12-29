@@ -301,7 +301,7 @@ class PushingEnv(gym.Env):
     
     def start_pose(self):
         robot.home()
-        target_pose = Affine(translation=[0.25, -0.25, -0.1], rotation=[-np.pi, 0, np.pi/2])
+        target_pose = Affine(translation=[0.25, -0.34, -0.1], rotation=[-np.pi, 0, np.pi/2])
         robot.lin(target_pose)
 
     def reset(self, seed = None):
