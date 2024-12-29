@@ -248,7 +248,35 @@ class PushingEnv(gym.Env):
         elif action == 3:
             move_backward()
 
-    def compute_reward(self): # TODO check if function is working / fix
+
+    def calculate_reward(self):
+        current_pose = robot.get_eef_pose()
+        current_position = current_pose.translation
+
+        # Get positions of all objects
+        objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
+        
+        # Calculate distances to all objects
+        distances = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
+        
+        # Find the nearest object
+        nearest_distance = min(distances)
+        nearest_object_id = self.object_ids[next(obj for obj in self.object_ids if nearest_distance in [np.linalg.norm(np.array(current_position) - np.array(bullet_client.getBasePositionAndOrientation(obj_id)[0])) for obj_id in self.object_ids[obj]])][0]
+        print("Nearest object ID:", nearest_object_id)
+        nearest_object_type = next(obj for obj in self.object_ids if nearest_distance in [np.linalg.norm(np.array(current_position) - np.array(bullet_client.getBasePositionAndOrientation(obj_id)[0])) for obj_id in self.object_ids[obj]])
+        print("Nearest object type:", nearest_object_type)
+        
+        # Calculate reward
+        if self.previous_distance is None or nearest_distance < self.previous_distance:
+            reward = 1
+        else:
+            reward = 0
+        
+        self.previous_distance = nearest_distance
+        return reward
+
+    def compute_reward(self):  # TODO check if function is working / fix
+        reward = self.calculate_reward()
         reward = 0
         for obj_id, target_color in zip(self.object_ids, self.target_colors):
             obj_pos = bullet_client.getBasePositionAndOrientation(obj_id)[0]
