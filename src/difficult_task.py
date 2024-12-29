@@ -22,7 +22,6 @@ if not RENDER:
 
 bullet_client.resetSimulation()
 robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)
-robot.home()
 
 
 # Environment
@@ -37,7 +36,7 @@ class PushingEnv(gym.Env):
                             'x': 0.15 + 0.01, # min_size_object + offset
                             'y': 0.15 + 0.01
                           }     
-        self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right) TODO: mayby change to 6 for rotations
+        self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right)
         self.object_ids = {}
         self.goal_ids = {}
         self.target_positions = {}
@@ -104,10 +103,6 @@ class PushingEnv(gym.Env):
                 # Generate poses for both goals
                 goal1_pose = self.generate_goal_pose(goal1_coords, z_goal)
                 goal2_pose = self.generate_goal_pose(goal2_coords, z_goal)
-                
-                # Print goal areas
-                print(f"Goal area 1: {goal1_coords}")
-                print(f"Goal area 2: {goal2_coords}")
                 
                 # Load URDFs
                 for coords, pose, colour in zip([goal1_coords, goal2_coords], 
@@ -204,8 +199,6 @@ class PushingEnv(gym.Env):
             bullet_client.stepSimulation()
             time.sleep(1 / 100)
     
-    # self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
-
     def get_state(self):
         object_states = []
         for obj_id_list in self.object_ids.values():
@@ -236,21 +229,35 @@ class PushingEnv(gym.Env):
         object_states = np.pad(object_states, (0, 3 * self.max_objects - len(object_states)), constant_values=0)
 
         goal_states = np.array(goal_states).flatten()
-        # TODO shape observation space abstimmen
         # Zustand zusammensetzen
         return np.concatenate([robot_state, object_states, goal_states])
     
     def perform_action(self, action):
-        if action == 0:
-            move_left()
-        elif action == 1:
-            move_right()
-        elif action == 2:
-            move_forward()
-        elif action == 3:
-            move_backward()
+        current_pose = robot.get_eef_pose()
+        fixed_orientation = [-np.pi, 0, np.pi/2]
+        if action == 0:  # Move left
+            new_x = current_pose.translation[0] - 0.01
+            new_y = current_pose.translation[1]
+        elif action == 1:  # Move right
+            new_x = current_pose.translation[0] + 0.01
+            new_y = current_pose.translation[1]
+        elif action == 2:  # Move forward
+            new_x = current_pose.translation[0]
+            new_y = current_pose.translation[1] + 0.01
+        elif action == 3:  # Move backward
+            new_x = current_pose.translation[0]
+            new_y = current_pose.translation[1] - 0.01
+        else:
+            return  # Invalid action
 
-    def reward_dist_robot_obj(self):
+        # Create a new target pose with updated x and y, keeping z the same and setting the fixed orientation
+        target_pose = Affine(
+            translation=[new_x, new_y, -0.1],  # Keep z the same
+            rotation=fixed_orientation  # Set the fixed orientation
+        )
+        robot.lin(target_pose)
+
+    def calculate_reward(self):
         current_pose = robot.get_eef_pose()
         current_position = current_pose.translation
 
@@ -329,13 +336,21 @@ class PushingEnv(gym.Env):
             reward += 100
         # implement more rewards
         return reward
-    '''
+    
+    def objectOffTable(): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
+                        # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
+        return True
+    
+    def start_pose(self):
+        robot.home()
+        target_pose = Affine(translation=[0.25, -0.34, -0.1], rotation=[-np.pi, 0, np.pi/2])
+        robot.lin(target_pose)
 
     def reset(self, seed = None):
         super().reset(seed=seed)
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
-        robot.home()
+        self.start_pose()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         self.generateGoalAreas()
@@ -356,8 +371,8 @@ class PushingEnv(gym.Env):
             "Episode": int(self.episode),
             "Step": int(self.step_count),
             "Action": int(action),
-            "Reward": int(reward),
-            "State": state.tolist() if isinstance(reward, np.ndarray) else float(reward),  # Convert state to list if it's a numpy array
+            "Reward": float(reward),
+            "State": state.tolist() if isinstance(state, np.ndarray) else state,
             "Done": bool(done)
         }
         self.log_data.append(log_entry)
@@ -365,18 +380,27 @@ class PushingEnv(gym.Env):
             json.dump(self.log_data, file, indent=4)
         self.step_count += 1
 
+    # TODO implement plot function again? (@Philipp: dass sie je existierte ist ein Mythos)
+
     def step(self, action):
         self.perform_action(action)
-        reward = np.random.uniform([-1000, 1000]) #self.compute_reward() # TODO: for testing, uncomment reward function later
-        done = False 
+        reward = np.random.uniform(-1000, 1000) #self.compute_reward() # TODO: for testing, uncomment reward function later
+        
+        max_steps = 1000 # TODO: think about max steps after which episode is terminated
+        if self.step_count >= max_steps:
+            truncated = True
+        else:
+            truncated = False
+        info = {} # additional info
         # if(getNearestObjectRobot()==None):
         #   done = True
         # if no neuarest object = None, task is done
-    
+        done = False # TODO: terminal condition if goal is achieved
+
         print(f"\rEpisode {self.episode}, Step {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         state = self.get_state()
         self.log_step(action, reward, state, done)
-        return state, reward, done, {}
+        return state, reward, done, truncated, info
     
 def train(environment):
     # Umgebung erstellen
@@ -386,14 +410,17 @@ def train(environment):
     model = PPO("MlpPolicy", env, verbose=1)
 
     # Training starten
+    # falls ein existierendes model weitertrainiert werden soll:
+    # model = PPO.load("existing_pushing_policy", env=env)
     print("Training beginnt...")
-    model.learn(total_timesteps=10)  # Anzahl der Trainingsschritte
+    model.learn(total_timesteps=100)  # Anzahl der Trainingsschritte
 
     # Modell speichern
     model.save("pushing_policy")
     print("Training abgeschlossen und Modell gespeichert.")
 
     # Testphase (optional)
+    '''
     test_env = PushingEnv()
     obs = test_env.reset()
     for _ in range(100):  # 100 Test-Schritte
@@ -403,93 +430,14 @@ def train(environment):
         if done:
             print("Episode abgeschlossen")
             break
+    '''       
 
-# Funktionen für Bewegungen
-def move_right():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.1, 0, 0])
-    robot.lin(target_pose)
-
-def move_left():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0.1, 0, 0])
-    robot.lin(target_pose)
-
-def move_forward():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0.1, 0])
-    robot.lin(target_pose)
-
-def move_backward():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, -0.1, 0])
-    robot.lin(target_pose)
-
-def move_up():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, -0.1])
-    robot.lin(target_pose)
-
-def move_down():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, 0.1])
-    robot.lin(target_pose)
-
-def start_pose():
-    robot.home()
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.6])
-    robot.lin(target_pose)
 
 def main():
     env = PushingEnv()
-    env.reset()
-    print("State:", env.get_state())
-    # print("State dimension:", env.state_dim)
-    # print(len(env.get_state()))
-    # print(env.get_state())
-    #print(env.state_dim)
-    #print(env.observation_space)
-    #env.log_step(1, 1000, env.get_state(), False)
-    #train(env)
-
-    start_pose()
-    reward_dist_robot_obj = env.reward_dist_robot_obj()
-    print("Current Reward for Robot to Object in start pose:", reward_dist_robot_obj)
-    
-    '''
+    train(env)
     input("Press Enter to continue...")
-    move_forward()
-    reward, env.nearest_object_id = env.reward_dist_robot_obj()
-    print("Current Reward for Robot to Object after moving 1 forward:", reward_dist_robot_obj)
-    '''
-
-    input("Press Enter to continue...")
-    move_forward()
-    reward_dist_robot_obj = env.reward_dist_robot_obj()
-    print("Current Reward for Robot to Object after moving 2 forward:", reward_dist_robot_obj)
-
-    env.test_arg_nearest_object()
-    print("nearest obejct printed before?")
-
-    input("Press Enter to continue...")
-    move_forward()
-    reward_dist_robot_obj = env.reward_dist_robot_obj() 
-    print("Current Reward for Robot to Object after moving  3 forward:", reward_dist_robot_obj)
-
-    input("Press Enter to continue...")
-    move_forward()
-    reward_dist_robot_obj = env.reward_dist_robot_obj() 
-    print("Current Reward for Robot to Object after moving  4 forward:", reward_dist_robot_obj)
-    
-    input("Press Enter to continue...")
-    move_forward()
-    reward_dist_robot_obj = env.reward_dist_robot_obj() 
-    print("Current Reward for Robot to Object after moving  5 forward:", reward_dist_robot_obj)
-
-    # Wichtig: wenn Objekt im Ziel ist, muss self.nearest_object_id = None gesetzt werden und self.previous_distance = None
-    input("Press Enter to continue...") 
-    bullet_client.disconnect()  
+    bullet_client.disconnect()
 
 if __name__ == "__main__":
     main()
