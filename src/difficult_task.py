@@ -184,7 +184,7 @@ class PushingEnv(gym.Env):
         # Hier Zielbereiche und andere IDs speichern
         num_objects = len(self.object_ids)
         self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self.state_dim)
 
         # simulate the scene for 100 steps and wait for the object to settle
         for _ in range(100):
