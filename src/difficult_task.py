@@ -185,7 +185,7 @@ class PushingEnv(gym.Env):
             time.sleep(1/100)
         
         # Hier Zielbereiche und andere IDs speichern
-        num_objects = len(self.object_ids)
+        num_objects = sum(len(obj_id_list) for obj_id_list in self.object_ids.values())
         self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self.state_dim)
 
@@ -327,6 +327,8 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
+    print("State:", env.get_state())
+    print("State dimension:", env.state_dim)
     # train()
     input("Press Enter to continue...")
     bullet_client.disconnect()
