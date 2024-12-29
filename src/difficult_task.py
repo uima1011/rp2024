@@ -278,22 +278,15 @@ class PushingEnv(gym.Env):
     def step(self, action):
         self.perform_action(action)
         reward = self.compute_reward()
-<<<<<<< HEAD
         done = False 
         # if(getNearestObjectRobot()==None):
         #   done = True
         # if no neuarest object = None, task is done
     
-        #log_step(...)
-        print(f"\rStep {self.step_counter}: Reward: {reward}, Done: {done}, Action: {action}", end="")
-        return self.get_state(), reward, done, {}
-=======
-        # implement finish state:
-        done = False # if true --> break
+        print(f"\rStep {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         state = self.get_state()
         self.log_step(action, reward, state, done)
         return state, reward, done, {}
->>>>>>> b8c8461d6f32ebd7aacb075dbe5adba1633a9f01
     
 def train():
     # Umgebung erstellen
@@ -361,16 +354,12 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
-<<<<<<< HEAD
-    print("State:", env.get_state())
-=======
     # print("State:", env.get_state())
     # print("State dimension:", env.state_dim)
     # print(len(env.get_state()))
     # print(env.get_state())
     # print(env.state_dim)
     env.log_step(1, 1000, env.get_state(), False)
->>>>>>> b8c8461d6f32ebd7aacb075dbe5adba1633a9f01
     # train()
     input("Press Enter to continue...")
     bullet_client.disconnect()
