@@ -203,15 +203,22 @@ class PushingEnv(gym.Env):
                 angle_z = euler_angles[2]  # Winkel um die Z-Achse
                 object_states.append([position[0], position[1], angle_z])
 
+        goal_states = []
+        for goal_id_list in self.goal_ids.values():
+            for goal_id in goal_id_list:
+                position, orientation = bullet_client.getBasePositionAndOrientation(goal_id)
+                # Extrahiere den Winkel um die Z-Achse aus der Quaternion
+                euler_angles = R.from_quat(orientation).as_euler('xyz')
+                angle_z = euler_angles[2]
+                goal_states.append([position[0], position[1], angle_z])
+
         # Extrahiere die Roboterpose
         robot_pose = robot.get_eef_pose()
         robot_position = robot_pose.translation[:2]  # Nur x, y
 
-        # TODO add goal positions
-
         robot_state = np.array([robot_position[0], robot_position[1]])
 
-        return np.concatenate([robot_state, np.array(object_states).flatten()])
+        return np.concatenate([robot_state, np.array(object_states).flatten(), np.array(goal_states).flatten()])
 
     def perform_action(self, action):
         if action == 0:
