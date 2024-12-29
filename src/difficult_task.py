@@ -22,7 +22,6 @@ if not RENDER:
 
 bullet_client.resetSimulation()
 robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)
-robot.home()
 
 
 # Environment
@@ -351,6 +350,8 @@ def train(environment):
     model = PPO("MlpPolicy", env, verbose=1)
 
     # Training starten
+    # falls ein existierendes model weitertrainiert werden soll:
+    # model = PPO.load("existing_pushing_policy", env=env)
     print("Training beginnt...")
     model.learn(total_timesteps=10)  # Anzahl der Trainingsschritte
 
@@ -359,6 +360,7 @@ def train(environment):
     print("Training abgeschlossen und Modell gespeichert.")
 
     # Testphase (optional)
+    '''
     test_env = PushingEnv()
     obs = test_env.reset()
     for _ in range(100):  # 100 Test-Schritte
@@ -368,7 +370,7 @@ def train(environment):
         if done:
             print("Episode abgeschlossen")
             break
-
+    '''            
 # Funktionen für Bewegungen
 def move_right():
     current_pose = robot.get_eef_pose()
@@ -408,14 +410,7 @@ def start_pose():
 
 def main():
     env = PushingEnv()
-    env.reset()
-    # print("State:", env.get_state())
-    # print("State dimension:", env.state_dim)
-    # print(len(env.get_state()))
-    # print(env.get_state())
-    print(env.state_dim)
-    print(env.observation_space)
-    #env.log_step(1, 1000, env.get_state(), False)
+
     train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
