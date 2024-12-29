@@ -7,6 +7,8 @@ from transform import Affine
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 import gym
+from scipy.spatial.transform import Rotation as R
+
 
 # Setup
 RENDER = True
@@ -35,7 +37,7 @@ class PushingEnv(gym.Env):
                             'y': 0.15 + 0.01
                           }     
         self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
-        self.object_ids = []
+        self.object_ids = {}
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
@@ -171,7 +173,8 @@ class PushingEnv(gym.Env):
                         object_ids[objName].append(objID)
                     else:
                         print(f"Warning: Could not place {objName} - skipping remaining objects of this type")
-                        break 
+                        break
+        self.object_ids = object_ids 
         
         # Let objects settle
         for _ in range(100):
@@ -186,20 +189,28 @@ class PushingEnv(gym.Env):
         for _ in range(100):
             bullet_client.stepSimulation()
             time.sleep(1 / 100)
-
-        return self.object_ids
     
     # self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
 
     def get_state(self):
-        object_positions = [
-            bullet_client.getBasePositionAndOrientation(obj_id)[0]
-            for obj_id in self.object_ids
-        ]
-        # todo goal positions
+        object_states = []
+        for obj_id_list in self.object_ids.values():
+            for obj_id in obj_id_list:
+                position, orientation = bullet_client.getBasePositionAndOrientation(obj_id)
+                # Extrahiere den Winkel um die Z-Achse aus der Quaternion
+                euler_angles = R.from_quat(orientation).as_euler('xyz')
+                angle_z = euler_angles[2]  # Winkel um die Z-Achse
+                object_states.append([position[0], position[1], angle_z])
+
+        # Extrahiere die Roboterpose
         robot_pose = robot.get_eef_pose()
-        robot_position = robot_pose.translation
-        return np.concatenate([robot_position, np.array(object_positions).flatten()])
+        robot_position = robot_pose.translation[:2]  # Nur x, y
+
+        # TODO add goal positions
+
+        robot_state = np.array([robot_position[0], robot_position[1]])
+
+        return np.concatenate([robot_state, np.array(object_states).flatten()])
 
     def perform_action(self, action):
         if action == 0:
