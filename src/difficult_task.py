@@ -36,8 +36,8 @@ class PushingEnv(gym.Env):
                             'x': 0.15 + 0.01, # min_size_object + offset
                             'y': 0.15 + 0.01
                           }     
-        self.action_space = gym.spaces.Discrete(4)  # 4 Bewegungen
-        self.object_ids = {}
+        self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right) TODO: mayby change to 6 for rotations
+        self.object_ids = []
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
@@ -182,7 +182,8 @@ class PushingEnv(gym.Env):
             time.sleep(1/100)
         
         # Hier Zielbereiche und andere IDs speichern
-        self.state_dim = 3 * len(self.object_ids) + 3 # + 6 (2 mal x,y,angle) target positions
+        num_objects = len(self.object_ids)
+        self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
 
         # simulate the scene for 100 steps and wait for the object to settle
