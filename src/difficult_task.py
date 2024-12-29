@@ -265,6 +265,7 @@ class PushingEnv(gym.Env):
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
         robot.home()
+        start_pose()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         self.generateGoalAreas()
@@ -296,16 +297,23 @@ class PushingEnv(gym.Env):
 
     def step(self, action):
         self.perform_action(action)
-        reward = np.random.uniform([-1000, 1000]) #self.compute_reward() # TODO: for testing, uncomment reward function later
-        done = False 
+        reward = np.random.uniform(-1000, 1000) #self.compute_reward() # TODO: for testing, uncomment reward function later
+        
+        max_steps = 1000 # TODO: think about max steps after which episode is terminated
+        if self.step_count >= max_steps:
+            truncated = True
+        else:
+            truncated = False
+        info = {} # additional info
         # if(getNearestObjectRobot()==None):
         #   done = True
         # if no neuarest object = None, task is done
-    
+        done = False # TODO: terminal condition if goal is achieved
+
         print(f"\rEpisode {self.episode}, Step {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         state = self.get_state()
         self.log_step(action, reward, state, done)
-        return state, reward, done, {}
+        return state, reward, done, truncated, info
     
 def train(environment):
     # Umgebung erstellen
