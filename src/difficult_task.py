@@ -42,6 +42,7 @@ class PushingEnv(gym.Env):
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
+        self.previous_distance = None
 
     def check_rectangle_overlap(self, rect1, rect2):
         """
@@ -189,6 +190,7 @@ class PushingEnv(gym.Env):
         self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self.state_dim)
 
+
         # simulate the scene for 100 steps and wait for the object to settle
         for _ in range(100):
             bullet_client.stepSimulation()
@@ -233,7 +235,35 @@ class PushingEnv(gym.Env):
         elif action == 3:
             move_backward()
 
-    def compute_reward(self): # TODO check if function is working / fix
+
+    def calculate_reward(self):
+        current_pose = robot.get_eef_pose()
+        current_position = current_pose.translation
+
+        # Get positions of all objects
+        objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
+        
+        # Calculate distances to all objects
+        distances = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
+        
+        # Find the nearest object
+        nearest_distance = min(distances)
+        nearest_object_id = self.object_ids[next(obj for obj in self.object_ids if nearest_distance in [np.linalg.norm(np.array(current_position) - np.array(bullet_client.getBasePositionAndOrientation(obj_id)[0])) for obj_id in self.object_ids[obj]])][0]
+        print("Nearest object ID:", nearest_object_id)
+        nearest_object_type = next(obj for obj in self.object_ids if nearest_distance in [np.linalg.norm(np.array(current_position) - np.array(bullet_client.getBasePositionAndOrientation(obj_id)[0])) for obj_id in self.object_ids[obj]])
+        print("Nearest object type:", nearest_object_type)
+        
+        # Calculate reward
+        if self.previous_distance is None or nearest_distance < self.previous_distance:
+            reward = 1
+        else:
+            reward = 0
+        
+        self.previous_distance = nearest_distance
+        return reward
+
+    def compute_reward(self):  # TODO check if function is working / fix
+        reward = self.calculate_reward()
         reward = 0
         for obj_id, target_color in zip(self.object_ids, self.target_colors):
             obj_pos = bullet_client.getBasePositionAndOrientation(obj_id)[0]
@@ -328,15 +358,18 @@ def main():
     env = PushingEnv()
     env.reset()
     start_pose()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
+    #move_forward()
+    #move_left()
+    #move_forward()
+    #move_left()
+    #move_forward()
+    #move_left()
+    #move_forward()
     print("State:", env.get_state())
     # train()
+    reward = env.calculate_reward()
+    print("Current Reward:", reward)
+
     input("Press Enter to continue...")
     bullet_client.disconnect()
 
