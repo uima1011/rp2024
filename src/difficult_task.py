@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 import gym
 from scipy.spatial.transform import Rotation as R
-
+import json
 
 # Setup
 RENDER = True
@@ -43,6 +43,11 @@ class PushingEnv(gym.Env):
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
 
+        self.episode = 0
+        self.step_count = 0
+        self.log_path = "/home/group1/workspace/src/log.json"
+        self.log_data = []
+            
     def check_rectangle_overlap(self, rect1, rect2):
         """
         Check if two rectangles overlap.
@@ -252,14 +257,32 @@ class PushingEnv(gym.Env):
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         self.generateGoalAreas()
+        self.episode += 1
+        self.step_count = 0
         return self.get_state()
+
+    def log_step(self, action, reward, state, done):
+        log_entry = {
+            "Episode": self.episode,
+            "Step": self.step_count,
+            "Action": action,
+            "Reward": reward,
+            "State": state.tolist(),  # Convert state to list if it's a numpy array
+            "Done": done
+        }
+        self.log_data.append(log_entry)
+        with open(self.log_path, mode='w') as file:
+            json.dump(self.log_data, file, indent=4)
+        self.step_count += 1
 
     def step(self, action):
         self.perform_action(action)
         reward = self.compute_reward()
         # implement finish state:
         done = False # if true --> break
-        return self.get_state(), reward, done, {}
+        state = self.get_state()
+        self.log_step(action, reward, state, done)
+        return state, reward, done, {}
     
 def train():
     # Umgebung erstellen
@@ -327,11 +350,12 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
-    print("State:", env.get_state())
-    print("State dimension:", env.state_dim)
-    print(len(env.get_state()))
-    print(env.get_state())
-    print(env.state_dim)
+    # print("State:", env.get_state())
+    # print("State dimension:", env.state_dim)
+    # print(len(env.get_state()))
+    # print(env.get_state())
+    # print(env.state_dim)
+    env.log_step(1, 1000, env.get_state(), False)
     # train()
     input("Press Enter to continue...")
     bullet_client.disconnect()
