@@ -218,7 +218,7 @@ class PushingEnv(gym.Env):
             target_pos = self.target_positions[target_color]
             distance = np.linalg.norm(np.array(obj_pos) - np.array(target_pos))
             reward -= distance
-        if False # TODO if no nearest object do...
+        if False: # TODO if no nearest object do...
             reward += 100
         # implement more rewards
         return reward
