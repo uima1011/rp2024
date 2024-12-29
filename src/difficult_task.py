@@ -313,8 +313,8 @@ class PushingEnv(gym.Env):
             "Episode": int(self.episode),
             "Step": int(self.step_count),
             "Action": int(action),
-            "Reward": int(reward),
-            "State": state.tolist() if isinstance(reward, np.ndarray) else float(reward),  # Convert state to list if it's a numpy array
+            "Reward": float(reward),
+            "State": state.tolist() if isinstance(state, np.ndarray) else state,
             "Done": bool(done)
         }
         self.log_data.append(log_entry)
@@ -374,32 +374,32 @@ def train(environment):
 # Funktionen für Bewegungen
 def move_right():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.1, 0, 0])
+    target_pose = current_pose * Affine(translation=[-0.01, 0, 0])
     robot.lin(target_pose)
 
 def move_left():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0.1, 0, 0])
+    target_pose = current_pose * Affine(translation=[0.01, 0, 0])
     robot.lin(target_pose)
 
 def move_forward():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0.1, 0])
+    target_pose = current_pose * Affine(translation=[0, 0.01, 0])
     robot.lin(target_pose)
 
 def move_backward():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, -0.1, 0])
+    target_pose = current_pose * Affine(translation=[0, -0.01, 0])
     robot.lin(target_pose)
 
 def move_up():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, -0.1])
+    target_pose = current_pose * Affine(translation=[0, 0, -0.01])
     robot.lin(target_pose)
 
 def move_down():
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, 0.1])
+    target_pose = current_pose * Affine(translation=[0, 0, 0.01])
     robot.lin(target_pose)
 
 def start_pose():
