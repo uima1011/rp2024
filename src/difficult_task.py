@@ -403,7 +403,7 @@ def move_down():
 def start_pose():
     robot.home()
     current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.6])
+    target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.61])
     robot.lin(target_pose)
 
 def main():
