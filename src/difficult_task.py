@@ -7,6 +7,7 @@ from transform import Affine
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 import gymnasium as gym
+import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
 import json
 
@@ -40,8 +41,11 @@ class PushingEnv(gym.Env):
         self.object_ids = {}
         self.goal_ids = {}
         self.target_positions = {}
-        self.state_dim = None  # Definieren, sobald Objekte erstellt werden
-        self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
+        # Beispielhafte Platzhalter-Definition von observation_space
+        # Passe dies entsprechend der maximal erwarteten Zustandsdimension an
+        self.max_objects = 16  # Annahme: maximal 10 Objekte
+        state_dim = 2 + 3 * self.max_objects + 3 * 2  # robot_state + object_states + goal_states
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,), dtype=np.float32)
 
         self.episode = 0
         self.step_count = 0
@@ -192,7 +196,6 @@ class PushingEnv(gym.Env):
         # Hier Zielbereiche und andere IDs speichern
         num_objects = sum(len(obj_id_list) for obj_id_list in self.object_ids.values())
         self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self.state_dim)
 
         # simulate the scene for 100 steps and wait for the object to settle
         for _ in range(100):
@@ -226,8 +229,15 @@ class PushingEnv(gym.Env):
 
         robot_state = np.array([robot_position[0], robot_position[1]])
 
-        return np.concatenate([robot_state, np.array(object_states).flatten(), np.array(goal_states).flatten()])
+        # Fülle Zustände auf die maximale Dimension auf
+        object_states = np.array(object_states).flatten()
+        object_states = np.pad(object_states, (0, 3 * self.max_objects - len(object_states)), constant_values=0)
 
+        goal_states = np.array(goal_states).flatten()
+        # TODO shape observation space abstimmen
+        # Zustand zusammensetzen
+        return np.concatenate([robot_state, object_states, goal_states])
+    
     def perform_action(self, action):
         if action == 0:
             move_left()
@@ -260,9 +270,15 @@ class PushingEnv(gym.Env):
         self.generateGoalAreas()
         self.episode += 1
         self.step_count = 0
-        observation = self.get_state()
-        info = {} # additional information
-        return observation, info
+
+        # Berechne die Beobachtungsraumdimension basierend auf dem Zustand
+        state = self.get_state()
+        # Warnung, falls Zustand nicht mit observation_space übereinstimmt
+        if state.shape != self.observation_space.shape:
+            print(f"Warnung: Zustandsdimension ({state.shape}) stimmt nicht mit observation_space ({self.observation_space.shape}) überein.")
+
+        info = {}  # Hier kannst du zusätzliche Informationen hinzufügen, falls benötigt
+        return state, info
 
     def log_step(self, action, reward, state, done):
         log_entry = {
