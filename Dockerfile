@@ -1,7 +1,7 @@
 ##############################################################################
 ##                                Base Image                                ##
 ##############################################################################
-ARG RENDER=nvidia
+ARG RENDER=base
 FROM python:3.12.7 as python
 USER root
 ENV TZ=Europe/Berlin
@@ -68,6 +68,7 @@ RUN pip install --no-cache-dir loguru
 RUN pip install --no-cache-dir scipy
 RUN pip install --no-cache-dir --timeout=10000 stable-baselines3
 RUN pip install --no-cache-dir gym
+RUN pip install --no-cache-dir shimmy>=2.0
 
 ENV PYTHONPATH=/home/$USER/workspace/src:$PYTHONPATH
 

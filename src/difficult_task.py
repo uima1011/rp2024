@@ -6,9 +6,10 @@ from bullet_env.bullet_robot import BulletRobot
 from transform import Affine
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-import gym
+import gymnasium as gym
+import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
-
+import json
 
 # Setup
 RENDER = True
@@ -40,10 +41,17 @@ class PushingEnv(gym.Env):
         self.object_ids = {}
         self.goal_ids = {}
         self.target_positions = {}
-        self.state_dim = None  # Definieren, sobald Objekte erstellt werden
-        self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
-        self.previous_distance = None
+        # Beispielhafte Platzhalter-Definition von observation_space
+        # Passe dies entsprechend der maximal erwarteten Zustandsdimension an
+        self.max_objects = 16  # Annahme: maximal 10 Objekte
+        state_dim = 2 + 3 * self.max_objects + 3 * 2  # robot_state + object_states + goal_states
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,), dtype=np.float32)
 
+        self.episode = 0
+        self.step_count = 0
+        self.log_path = "/home/group1/workspace/src/log.json"
+        self.log_data = []
+            
     def check_rectangle_overlap(self, rect1, rect2):
         """
         Check if two rectangles overlap.
@@ -188,8 +196,6 @@ class PushingEnv(gym.Env):
         # Hier Zielbereiche und andere IDs speichern
         num_objects = sum(len(obj_id_list) for obj_id_list in self.object_ids.values())
         self.state_dim = (2 + 2 * num_objects + num_objects + 2 * 2 + 2,) # robot_positions(x,y) + object_positions(x,y)*num_objects + object_orientations + goal_positions + goal_oriantations
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self.state_dim)
-
 
         # simulate the scene for 100 steps and wait for the object to settle
         for _ in range(100):
@@ -223,8 +229,15 @@ class PushingEnv(gym.Env):
 
         robot_state = np.array([robot_position[0], robot_position[1]])
 
-        return np.concatenate([robot_state, np.array(object_states).flatten(), np.array(goal_states).flatten()])
+        # Fülle Zustände auf die maximale Dimension auf
+        object_states = np.array(object_states).flatten()
+        object_states = np.pad(object_states, (0, 3 * self.max_objects - len(object_states)), constant_values=0)
 
+        goal_states = np.array(goal_states).flatten()
+        # TODO shape observation space abstimmen
+        # Zustand zusammensetzen
+        return np.concatenate([robot_state, object_states, goal_states])
+    
     def perform_action(self, action):
         if action == 0:
             move_left()
@@ -275,32 +288,63 @@ class PushingEnv(gym.Env):
         # implement more rewards
         return reward
 
-    def reset(self):
+    def reset(self, seed = None):
+        super().reset(seed=seed)
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
         robot.home()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         self.generateGoalAreas()
-        return self.get_state()
+        self.episode += 1
+        self.step_count = 0
+
+        # Berechne die Beobachtungsraumdimension basierend auf dem Zustand
+        state = self.get_state()
+        # Warnung, falls Zustand nicht mit observation_space übereinstimmt
+        if state.shape != self.observation_space.shape:
+            print(f"Warnung: Zustandsdimension ({state.shape}) stimmt nicht mit observation_space ({self.observation_space.shape}) überein.")
+
+        info = {}  # Hier kannst du zusätzliche Informationen hinzufügen, falls benötigt
+        return state, info
+
+    def log_step(self, action, reward, state, done):
+        log_entry = {
+            "Episode": int(self.episode),
+            "Step": int(self.step_count),
+            "Action": int(action),
+            "Reward": int(reward),
+            "State": state.tolist() if isinstance(reward, np.ndarray) else float(reward),  # Convert state to list if it's a numpy array
+            "Done": bool(done)
+        }
+        self.log_data.append(log_entry)
+        with open(self.log_path, mode='w') as file:
+            json.dump(self.log_data, file, indent=4)
+        self.step_count += 1
 
     def step(self, action):
         self.perform_action(action)
-        reward = self.compute_reward()
-        # implement finish state:
-        done = False # if true --> break
-        return self.get_state(), reward, done, {}
+        reward = np.random.uniform([-1000, 1000]) #self.compute_reward() # TODO: for testing, uncomment reward function later
+        done = False 
+        # if(getNearestObjectRobot()==None):
+        #   done = True
+        # if no neuarest object = None, task is done
     
-def train():
+        print(f"\rEpisode {self.episode}, Step {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
+        state = self.get_state()
+        self.log_step(action, reward, state, done)
+        return state, reward, done, {}
+    
+def train(environment):
     # Umgebung erstellen
-    env = DummyVecEnv([lambda: PushingEnv()])
+    env = DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
     model = PPO("MlpPolicy", env, verbose=1)
 
     # Training starten
     print("Training beginnt...")
-    model.learn(total_timesteps=100000)  # Anzahl der Trainingsschritte
+    model.learn(total_timesteps=10)  # Anzahl der Trainingsschritte
 
     # Modell speichern
     model.save("pushing_policy")
@@ -357,19 +401,14 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
-    start_pose()
-    #move_forward()
-    #move_left()
-    #move_forward()
-    #move_left()
-    #move_forward()
-    #move_left()
-    #move_forward()
-    print("State:", env.get_state())
-    # train()
-    reward = env.calculate_reward()
-    print("Current Reward:", reward)
-
+    # print("State:", env.get_state())
+    # print("State dimension:", env.state_dim)
+    # print(len(env.get_state()))
+    # print(env.get_state())
+    print(env.state_dim)
+    print(env.observation_space)
+    #env.log_step(1, 1000, env.get_state(), False)
+    train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
 
