@@ -41,7 +41,6 @@ class PushingEnv(gym.Env):
         self.goal_ids = {}
         self.target_positions = {}
         # Beispielhafte Platzhalter-Definition von observation_space
-        # Passe dies entsprechend der maximal erwarteten Zustandsdimension an
         self.max_objects = 16  # Annahme: maximal 10 Objekte
         state_dim = 2 + 3 * self.max_objects + 3 * 2  # robot_state + object_states + goal_states
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,), dtype=np.float32)
@@ -336,6 +335,7 @@ class PushingEnv(gym.Env):
             reward += 100
         # implement more rewards
         return reward
+    '''
     
     def objectOffTable(): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
                         # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
