@@ -299,7 +299,7 @@ class PushingEnv(gym.Env):
         # implement more rewards
         return reward
     
-    def start_pose():
+    def start_pose(self):
         robot.home()
         target_pose = Affine(translation=[0.25, -0.25, -0.1], rotation=[-np.pi, 0, np.pi/2])
         robot.lin(target_pose)
@@ -369,7 +369,7 @@ def train(environment):
     # falls ein existierendes model weitertrainiert werden soll:
     # model = PPO.load("existing_pushing_policy", env=env)
     print("Training beginnt...")
-    model.learn(total_timesteps=10)  # Anzahl der Trainingsschritte
+    model.learn(total_timesteps=100)  # Anzahl der Trainingsschritte
 
     # Modell speichern
     model.save("pushing_policy")
