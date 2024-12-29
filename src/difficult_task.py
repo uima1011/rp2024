@@ -102,10 +102,6 @@ class PushingEnv(gym.Env):
                 goal1_pose = self.generate_goal_pose(goal1_coords, z_goal)
                 goal2_pose = self.generate_goal_pose(goal2_coords, z_goal)
                 
-                # Print goal areas
-                print(f"Goal area 1: {goal1_coords}")
-                print(f"Goal area 2: {goal2_coords}")
-                
                 # Load URDFs
                 for coords, pose, colour in zip([goal1_coords, goal2_coords], 
                                             [goal1_pose, goal2_pose], 
@@ -222,7 +218,6 @@ class PushingEnv(gym.Env):
 
         # Extrahiere die Roboterpose
         robot_pose = robot.get_eef_pose()
-        print("Robot pose (z koordinate):", robot_pose.translation[2])
         robot_position = robot_pose.translation[:2]  # Nur x, y
 
         robot_state = np.array([robot_position[0], robot_position[1]])
@@ -299,6 +294,10 @@ class PushingEnv(gym.Env):
         # implement more rewards
         return reward
     
+    def objectOffTable(): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
+                        # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
+        return True
+    
     def start_pose(self):
         robot.home()
         target_pose = Affine(translation=[0.25, -0.34, -0.1], rotation=[-np.pi, 0, np.pi/2])
@@ -337,6 +336,8 @@ class PushingEnv(gym.Env):
         with open(self.log_path, mode='w') as file:
             json.dump(self.log_data, file, indent=4)
         self.step_count += 1
+
+    # TODO implement plot function again? (@Philipp: dass sie je existierte ist ein Mythos)
 
     def step(self, action):
         self.perform_action(action)
