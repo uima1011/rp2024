@@ -206,15 +206,22 @@ class PushingEnv(gym.Env):
                 angle_z = euler_angles[2]  # Winkel um die Z-Achse
                 object_states.append([position[0], position[1], angle_z])
 
+        goal_states = []
+        for goal_id_list in self.goal_ids.values():
+            for goal_id in goal_id_list:
+                position, orientation = bullet_client.getBasePositionAndOrientation(goal_id)
+                # Extrahiere den Winkel um die Z-Achse aus der Quaternion
+                euler_angles = R.from_quat(orientation).as_euler('xyz')
+                angle_z = euler_angles[2]
+                goal_states.append([position[0], position[1], angle_z])
+
         # Extrahiere die Roboterpose
         robot_pose = robot.get_eef_pose()
         robot_position = robot_pose.translation[:2]  # Nur x, y
 
-        # TODO add goal positions
-
         robot_state = np.array([robot_position[0], robot_position[1]])
 
-        return np.concatenate([robot_state, np.array(object_states).flatten()])
+        return np.concatenate([robot_state, np.array(object_states).flatten(), np.array(goal_states).flatten()])
 
     def perform_action(self, action):
         if action == 0:
@@ -253,6 +260,32 @@ class PushingEnv(gym.Env):
         # implement finish state:
         done = False # if true --> break
         return self.get_state(), reward, done, {}
+    
+def train():
+    # Umgebung erstellen
+    env = DummyVecEnv([lambda: PushingEnv()])
+
+    # PPO-Modell initialisieren
+    model = PPO("MlpPolicy", env, verbose=1)
+
+    # Training starten
+    print("Training beginnt...")
+    model.learn(total_timesteps=100000)  # Anzahl der Trainingsschritte
+
+    # Modell speichern
+    model.save("pushing_policy")
+    print("Training abgeschlossen und Modell gespeichert.")
+
+    # Testphase (optional)
+    test_env = PushingEnv()
+    obs = test_env.reset()
+    for _ in range(100):  # 100 Test-Schritte
+        action, _ = model.predict(obs)
+        obs, reward, done, _ = test_env.step(action)
+        print("Reward:", reward)
+        if done:
+            print("Episode abgeschlossen")
+            break
 
 # Funktionen für Bewegungen
 def move_right():
@@ -294,25 +327,9 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
-    print("State:", env.get_state())
+    # train()
     input("Press Enter to continue...")
     bullet_client.disconnect()
 
 if __name__ == "__main__":
     main()
-
-
-
-# Struktur für späteres Training (in etwa)
-"""
-env = DummyVecEnv([lambda: PushingEnv()])
-
-# Training mit PPO
-model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=100000)
-
-# Speichern und Testen
-model.save("pushing_policy")
-"""
-
-
