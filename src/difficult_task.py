@@ -36,7 +36,7 @@ class PushingEnv(gym.Env):
                             'x': 0.15 + 0.01, # min_size_object + offset
                             'y': 0.15 + 0.01
                           }     
-        self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right) TODO: mayby change to 6 for rotations
+        self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right)
         self.object_ids = {}
         self.goal_ids = {}
         self.target_positions = {}
@@ -201,8 +201,6 @@ class PushingEnv(gym.Env):
             bullet_client.stepSimulation()
             time.sleep(1 / 100)
     
-    # self.target_positions = {"red": [0.5, 0.5, 0.1], "green": [0.8, -0.5, 0.1]}  # Beispiel
-
     def get_state(self):
         object_states = []
         for obj_id_list in self.object_ids.values():
@@ -234,7 +232,6 @@ class PushingEnv(gym.Env):
         object_states = np.pad(object_states, (0, 3 * self.max_objects - len(object_states)), constant_values=0)
 
         goal_states = np.array(goal_states).flatten()
-        # TODO shape observation space abstimmen
         # Zustand zusammensetzen
         return np.concatenate([robot_state, object_states, goal_states])
     
@@ -242,23 +239,23 @@ class PushingEnv(gym.Env):
         current_pose = robot.get_eef_pose()
         fixed_orientation = [-np.pi, 0, np.pi/2]
         if action == 0:  # Move left
-            new_x = current_pose.translation[0] - 0.1
+            new_x = current_pose.translation[0] - 0.01
             new_y = current_pose.translation[1]
         elif action == 1:  # Move right
-            new_x = current_pose.translation[0] + 0.1
+            new_x = current_pose.translation[0] + 0.01
             new_y = current_pose.translation[1]
         elif action == 2:  # Move forward
             new_x = current_pose.translation[0]
-            new_y = current_pose.translation[1] + 0.1
+            new_y = current_pose.translation[1] + 0.01
         elif action == 3:  # Move backward
             new_x = current_pose.translation[0]
-            new_y = current_pose.translation[1] - 0.1
+            new_y = current_pose.translation[1] - 0.01
         else:
             return  # Invalid action
 
         # Create a new target pose with updated x and y, keeping z the same and setting the fixed orientation
         target_pose = Affine(
-            translation=[new_x, new_y, current_pose.translation[2]],  # Keep z the same
+            translation=[new_x, new_y, -0.1],  # Keep z the same
             rotation=fixed_orientation  # Set the fixed orientation
         )
         robot.lin(target_pose)
@@ -301,12 +298,17 @@ class PushingEnv(gym.Env):
             reward += 100
         # implement more rewards
         return reward
+    
+    def start_pose():
+        robot.home()
+        target_pose = Affine(translation=[0.25, -0.25, -0.1], rotation=[-np.pi, 0, np.pi/2])
+        robot.lin(target_pose)
 
     def reset(self, seed = None):
         super().reset(seed=seed)
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
-        start_pose()
+        self.start_pose()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
         self.generateGoalAreas()
@@ -385,38 +387,6 @@ def train(environment):
             print("Episode abgeschlossen")
             break
     '''       
-
-# Funktionen für Bewegungen
-def move_right():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.01, 0, 0])
-    target_pose.translation[2] = -0.1
-    target_pose.rotation = [0, 0, 0]
-    robot.lin(target_pose)
-
-def move_left():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0.01, 0, 0])
-    target_pose.translation[2] = -0.1
-    robot.lin(target_pose)
-
-def move_forward():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0.01, 0])
-    target_pose.translation[2] = -0.1
-    target_pose.rotation = [-np.pi, 0, np.pi/2]
-    robot.lin(target_pose)
-
-def move_backward():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, -0.01, 0])
-    target_pose.translation[2] = -0.1
-    robot.lin(target_pose)
-
-def start_pose():
-    robot.home()
-    target_pose = Affine(translation=[0, -0.6, -0.1], rotation=[-np.pi, 0, np.pi/2])
-    robot.lin(target_pose)
 
 
 def main():
