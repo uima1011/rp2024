@@ -239,15 +239,29 @@ class PushingEnv(gym.Env):
         return np.concatenate([robot_state, object_states, goal_states])
     
     def perform_action(self, action):
-        if action == 0:
-            move_left()
-        elif action == 1:
-            move_right()
-        elif action == 2:
-            move_forward()
-        elif action == 3:
-            move_backward()
+        current_pose = robot.get_eef_pose()
+        fixed_orientation = [-np.pi, 0, np.pi/2]
+        if action == 0:  # Move left
+            new_x = current_pose.translation[0] - 0.1
+            new_y = current_pose.translation[1]
+        elif action == 1:  # Move right
+            new_x = current_pose.translation[0] + 0.1
+            new_y = current_pose.translation[1]
+        elif action == 2:  # Move forward
+            new_x = current_pose.translation[0]
+            new_y = current_pose.translation[1] + 0.1
+        elif action == 3:  # Move backward
+            new_x = current_pose.translation[0]
+            new_y = current_pose.translation[1] - 0.1
+        else:
+            return  # Invalid action
 
+        # Create a new target pose with updated x and y, keeping z the same and setting the fixed orientation
+        target_pose = Affine(
+            translation=[new_x, new_y, current_pose.translation[2]],  # Keep z the same
+            rotation=fixed_orientation  # Set the fixed orientation
+        )
+        robot.lin(target_pose)
 
     def calculate_reward(self):
         current_pose = robot.get_eef_pose()
@@ -378,6 +392,7 @@ def move_right():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[-0.01, 0, 0])
     target_pose.translation[2] = -0.1
+    target_pose.rotation = [0, 0, 0]
     robot.lin(target_pose)
 
 def move_left():
@@ -390,6 +405,7 @@ def move_forward():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0, 0.01, 0])
     target_pose.translation[2] = -0.1
+    target_pose.rotation = [-np.pi, 0, np.pi/2]
     robot.lin(target_pose)
 
 def move_backward():
