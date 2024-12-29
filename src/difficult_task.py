@@ -257,8 +257,13 @@ class PushingEnv(gym.Env):
     def step(self, action):
         self.perform_action(action)
         reward = self.compute_reward()
-        # implement finish state:
-        done = False # if true --> break
+        done = False 
+        # if(getNearestObjectRobot()==None):
+        #   done = True
+        # if no neuarest object = None, task is done
+    
+        #log_step(...)
+        print(f"\rStep {self.step_counter}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         return self.get_state(), reward, done, {}
     
 def train():
@@ -327,14 +332,6 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
-    start_pose()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
-    move_left()
-    move_forward()
     print("State:", env.get_state())
     # train()
     input("Press Enter to continue...")
