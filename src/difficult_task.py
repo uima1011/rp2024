@@ -283,7 +283,7 @@ class PushingEnv(gym.Env):
         #   done = True
         # if no neuarest object = None, task is done
     
-        print(f"\rStep {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
+        print(f"\rEpisode {self.episode}, Step {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         state = self.get_state()
         self.log_step(action, reward, state, done)
         return state, reward, done, {}
