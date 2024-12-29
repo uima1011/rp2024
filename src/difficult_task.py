@@ -37,7 +37,8 @@ class PushingEnv(gym.Env):
                             'y': 0.15 + 0.01
                           }     
         self.action_space = gym.spaces.Discrete(4)  # 4 directions (up, down, left, right) TODO: mayby change to 6 for rotations
-        self.object_ids = []
+        self.object_ids = {}
+        self.goal_ids = {}
         self.target_positions = {}
         self.state_dim = None  # Definieren, sobald Objekte erstellt werden
         self.observation_space = None  # Dynamisch gesetzt nach `spawn_objects()`
@@ -80,7 +81,7 @@ class PushingEnv(gym.Env):
         Returns False if unable to generate non-overlapping areas after max_attempts.
         """
         z_goal = -0.01
-        
+        obj_id = {'goal_red': [], 'goal_green': []}
         for attempt in range(max_attempts):
             # Generate first goal area
             goal1_coords = self.generate_single_goal_area(self.tableCords, self.goal_width)
@@ -102,12 +103,14 @@ class PushingEnv(gym.Env):
                                             [goal1_pose, goal2_pose], 
                                             colours):
                     urdf_path = f"/home/group1/workspace/assets/objects/goals/goal_{colour}.urdf"
-                    bullet_client.loadURDF(
+                    objID = bullet_client.loadURDF(
                         urdf_path,
                         pose.translation,
                         pose.quat,
                         flags=bullet_client.URDF_ENABLE_CACHED_GRAPHICS_SHAPES
                     )
+                    obj_id[f'goal_{colour}'].append(objID)
+                self.goal_ids = obj_id
                 return True
                 
         print("Failed to generate non-overlapping goal areas after", max_attempts, "attempts")
