@@ -371,40 +371,44 @@ def train(environment):
         if done:
             print("Episode abgeschlossen")
             break
-    '''            
+    '''       
+
 # Funktionen für Bewegungen
 def move_right():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[-0.01, 0, 0])
+    target_pose.translation[2] = -0.1
     robot.lin(target_pose)
 
 def move_left():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0.01, 0, 0])
-    target_pose.translation[2] = 0.01
+    target_pose.translation[2] = -0.1
     robot.lin(target_pose)
 
 def move_forward():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0, 0.01, 0])
-    target_pose.translation[2] = 0.01
+    target_pose.translation[2] = -0.1
     robot.lin(target_pose)
 
 def move_backward():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0, -0.01, 0])
-    target_pose.translation[2] = 0.01
+    target_pose.translation[2] = -0.1
     robot.lin(target_pose)
 
 def start_pose():
     robot.home()
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.61])
-    target_pose.translation[2] = 0.01
+    target_pose.translation[2] = -0.1
     robot.lin(target_pose)
+
 
 def main():
     env = PushingEnv()
+    robot.home()
     train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
