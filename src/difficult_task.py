@@ -324,6 +324,9 @@ def start_pose():
 def main():
     env = PushingEnv()
     env.reset()
+    print(len(env.get_state()))
+    print(env.get_state())
+    print(env.state_dim)
     # train()
     input("Press Enter to continue...")
     bullet_client.disconnect()
