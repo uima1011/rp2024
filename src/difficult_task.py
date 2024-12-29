@@ -292,7 +292,6 @@ class PushingEnv(gym.Env):
         super().reset(seed=seed)
         bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=bullet_client, urdf_path=URDF_PATH)  # Roboter neu laden
-        robot.home()
         start_pose()
         maxObjCount = 4
         self.spawn_objects(bullet_client, ['cubes', 'signs'], ['cube', 'plus'], ['red', 'green'], maxObjCount)
@@ -400,15 +399,12 @@ def move_backward():
 
 def start_pose():
     robot.home()
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.61])
-    target_pose.translation[2] = -0.1
+    target_pose = Affine(translation=[0, -0.6, -0.1], rotation=[-np.pi, 0, np.pi/2])
     robot.lin(target_pose)
 
 
 def main():
     env = PushingEnv()
-    robot.home()
     train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
