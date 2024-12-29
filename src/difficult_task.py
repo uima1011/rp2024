@@ -224,6 +224,7 @@ class PushingEnv(gym.Env):
 
         # Extrahiere die Roboterpose
         robot_pose = robot.get_eef_pose()
+        print("Robot pose (z koordinate):", robot_pose.translation[2])
         robot_position = robot_pose.translation[:2]  # Nur x, y
 
         robot_state = np.array([robot_position[0], robot_position[1]])
@@ -380,37 +381,30 @@ def move_right():
 def move_left():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0.01, 0, 0])
+    target_pose.translation[2] = 0.01
     robot.lin(target_pose)
 
 def move_forward():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0, 0.01, 0])
+    target_pose.translation[2] = 0.01
     robot.lin(target_pose)
 
 def move_backward():
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[0, -0.01, 0])
-    robot.lin(target_pose)
-
-def move_up():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, -0.01])
-    robot.lin(target_pose)
-
-def move_down():
-    current_pose = robot.get_eef_pose()
-    target_pose = current_pose * Affine(translation=[0, 0, 0.01])
+    target_pose.translation[2] = 0.01
     robot.lin(target_pose)
 
 def start_pose():
     robot.home()
     current_pose = robot.get_eef_pose()
     target_pose = current_pose * Affine(translation=[-0.55, -0.45, 0.61])
+    target_pose.translation[2] = 0.01
     robot.lin(target_pose)
 
 def main():
     env = PushingEnv()
-
     train(env)
     input("Press Enter to continue...")
     bullet_client.disconnect()
