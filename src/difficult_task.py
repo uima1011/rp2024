@@ -11,6 +11,7 @@ import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
 import json
 
+
 # Setup
 RENDER = True
 URDF_PATH = "/home/group1/workspace/assets/urdf/robot_without_gripper.urdf"
@@ -438,8 +439,6 @@ class PushingEnv(gym.Env):
             json.dump(self.log_data, file, indent=4)
         self.step_count += 1
 
-    # TODO implement plot function again? (@Philipp: dass sie je existierte ist ein Mythos)
-
     def step(self, action):
         self.perform_action(action)
         reward = np.random.uniform(-1000, 1000) #self.compute_reward() # TODO: for testing, uncomment reward function later
@@ -494,54 +493,55 @@ def main():
     env = PushingEnv()
     #train(env)
     env.reset()
-    print("State:", env.get_state())
-    # print("State dimension:", env.state_dim)
-    # print(len(env.get_state()))
-    # print(env.get_state())
-    #print(env.state_dim)
-    #print(env.observation_space)
-    #env.log_step(1, 1000, env.get_state(), False)
-    #train(env)
+    # print("State:", env.get_state())
+    # # print("State dimension:", env.state_dim)
+    # # print(len(env.get_state()))
+    # # print(env.get_state())
+    # #print(env.state_dim)
+    # #print(env.observation_space)
+    # #env.log_step(1, 1000, env.get_state(), False)
+    # #train(env)
     
-    env.check_dist_all_obj_goal()
-    input("Press Enter to continue...")
+    # env.check_dist_all_obj_goal()
+    # input("Press Enter to continue...")
     
-    env.start_pose()
-    reward_dist_robot_obj = env.nearest_obj_to_robot()
-    print("Current Reward for Robot to Object in start pose:", reward_dist_robot_obj)
+    # env.start_pose()
+    # reward_dist_robot_obj = env.nearest_obj_to_robot()
+    # print("Current Reward for Robot to Object in start pose:", reward_dist_robot_obj)
     
-    '''
-    input("Press Enter to continue...")
-    move_forward()
-    reward, env.nearest_object_id = env.reward_dist_robot_obj()
-    print("Current Reward for Robot to Object after moving 1 forward:", reward_dist_robot_obj)
-    '''
+    # '''
+    # input("Press Enter to continue...")
+    # move_forward()
+    # reward, env.nearest_object_id = env.reward_dist_robot_obj()
+    # print("Current Reward for Robot to Object after moving 1 forward:", reward_dist_robot_obj)
+    # '''
 
-    input("Press Enter to continue...")
-    env.perform_action(1)  # Move forward
-    reward_dist_robot_obj = env.nearest_obj_to_robot()
-    print("Current Reward for Robot to Object after moving 2 forward:", reward_dist_robot_obj)
+    # input("Press Enter to continue...")
+    # env.perform_action(1)  # Move forward
+    # reward_dist_robot_obj = env.nearest_obj_to_robot()
+    # print("Current Reward for Robot to Object after moving 2 forward:", reward_dist_robot_obj)
 
-    input("Press Enter to continue...")
-    env.perform_action(2)  # Move right
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  3 forward:", reward_dist_robot_obj)
+    # input("Press Enter to continue...")
+    # env.perform_action(2)  # Move right
+    # reward_dist_robot_obj = env.nearest_obj_to_robot() 
+    # print("Current Reward for Robot to Object after moving  3 forward:", reward_dist_robot_obj)
 
-    input("Press Enter to continue...")
-    env.perform_action(1)  # Move forward
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  4 forward:", reward_dist_robot_obj)
+    # input("Press Enter to continue...")
+    # env.perform_action(1)  # Move forward
+    # reward_dist_robot_obj = env.nearest_obj_to_robot() 
+    # print("Current Reward for Robot to Object after moving  4 forward:", reward_dist_robot_obj)
     
-    input("Press Enter to continue...")
-    env.perform_action(2)  # Move right
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  5 forward:", reward_dist_robot_obj)
+    # input("Press Enter to continue...")
+    # env.perform_action(2)  # Move right
+    # reward_dist_robot_obj = env.nearest_obj_to_robot() 
+    # print("Current Reward for Robot to Object after moving  5 forward:", reward_dist_robot_obj)
 
-    # Wichtig: wenn Objekt im Ziel ist, muss self.nearest_object_id = None gesetzt werden und self.previous_distance = None
-    input("Press Enter to continue...") 
-    bullet_client.disconnect()  
+    # # Wichtig: wenn Objekt im Ziel ist, muss self.nearest_object_id = None gesetzt werden und self.previous_distance = None
+    # input("Press Enter to continue...") 
+    # bullet_client.disconnect()  
 
-    # Bewegungen um Faktor 10 in perform_action erhöht (zurück auf 0.01 stellen)
+    # # Bewegungen um Faktor 10 in perform_action erhöht (zurück auf 0.01 stellen)
+
 
 if __name__ == "__main__":
     main()
