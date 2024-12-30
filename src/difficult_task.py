@@ -349,10 +349,16 @@ class PushingEnv(gym.Env):
         reward = 0
         if abs(self.previous_distance[0] - self.distance[0]) > 0.002:
             reward += 1
+        else:
+            reward -= 1
         if abs(self.previous_distance[1] - self.distance[1]) > 0.002:
-            reward += 10        
+            reward += 10
+        else:
+            reward -= 10
         if abs(self.previous_distance[2] - self.distance[2]) > 0.002:
-            reward -= 0.1   
+            reward -= 0.1
+        else:
+            reward += 0.1
         
         self.previous_distance = self.distance.copy()
 
