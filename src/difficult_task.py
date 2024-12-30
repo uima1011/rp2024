@@ -257,16 +257,6 @@ class PushingEnv(gym.Env):
             rotation=fixed_orientation  # Set the fixed orientation
         )
         robot.lin(target_pose)
-
-    #def get_dist_robot_all_obj(self):
-    #    current_pose = robot.get_eef_pose()
-    #    current_position = current_pose.translation
-    #    # checks distances of all objects to robot
-    #    # Get positions of all objects
-    #    objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
-    #    # Calculate distances to all objects
-    #    self.dist_robot_all_obj = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
-    #    return self.dist_robot_all_obj
     
     def get_dist_robot_objekt(self, obj_id):
         current_pose = robot.get_eef_pose()
@@ -282,19 +272,6 @@ class PushingEnv(gym.Env):
                 self.get_dist_robot_objekt(obj_id)
                 dist_list.append(self.get_dist_robot_objekt(obj_id))
         return dist_list
-
-    
-    #def dist_all_objects_goals(self):
-    #    self.object_goal_distances = {}
-    #    for obj_type, obj_id_list in self.object_ids.items():
-    #        color = obj_type.split('_')[1]
-    #        goal_id = self.goal_ids[f'goal_{color}'][0]
-    #        goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
-    #        for obj_id in obj_id_list:
-    #            obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
-    #            distance = np.linalg.norm(np.array(obj_position) - np.array(goal_position))
-    #            self.object_goal_distances[obj_id] = distance
-    #    return self.object_goal_distances
 
     def get_dist_object_goal(self, obj_id):
         color = obj_id.split('_')[1]
