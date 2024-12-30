@@ -347,12 +347,12 @@ class PushingEnv(gym.Env):
         self.distance[2] = self.get_dist_robot_goal(self.nearest_object_id)
         #remeber distances for next step
         reward = 0
-        if self.previous_distance[0] > self.distance[0]:
+        if abs(self.previous_distance[0] - self.distance[0]) > 0.002:
             reward += 1
-        if self.previous_distance[1] > self.distance[1]:
+        if abs(self.previous_distance[1] - self.distance[1]) > 0.002:
             reward += 10        
-        if self.previous_distance[2] > self.distance[2]:
-            reward -= 0.5   
+        if abs(self.previous_distance[2] - self.distance[2]) > 0.002:
+            reward -= 0.1   
         
         self.previous_distance = self.distance.copy()
 
@@ -405,7 +405,7 @@ class PushingEnv(gym.Env):
         self.perform_action(action)
         reward = self.distances_for_reward()
 
-        max_steps = 1000 # TODO: think about max steps after which episode is terminated
+        max_steps = 100 # TODO: think about max steps after which episode is terminated
         if self.step_count >= max_steps:
             truncated = True
         else:
