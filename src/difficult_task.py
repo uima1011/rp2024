@@ -49,8 +49,8 @@ class PushingEnv(gym.Env):
         self.step_count = 0
         self.log_path = "/home/group1/workspace/src/log.json"
         self.log_data = []
-        self.previous_distance = []
-        self.distance = []
+        self.distance = [None, None, None]
+        self.previous_distance = [None, None, None]
         self.nearest_object_id = None
         self.previous_nearest_object_id = None
         self.dist_robot_all_obj = []
@@ -238,17 +238,17 @@ class PushingEnv(gym.Env):
         current_pose = robot.get_eef_pose()
         fixed_orientation = [-np.pi, 0, np.pi/2]
         if action == 0:  # Move left
-            new_x = current_pose.translation[0] - 0.1
+            new_x = current_pose.translation[0] - 0.01
             new_y = current_pose.translation[1]
         elif action == 1:  # Move right
-            new_x = current_pose.translation[0] + 0.1
+            new_x = current_pose.translation[0] + 0.01
             new_y = current_pose.translation[1]
         elif action == 2:  # Move forward
             new_x = current_pose.translation[0]
-            new_y = current_pose.translation[1] + 0.1
+            new_y = current_pose.translation[1] + 0.01
         elif action == 3:  # Move backward  
             new_x = current_pose.translation[0]
-            new_y = current_pose.translation[1] - 0.1
+            new_y = current_pose.translation[1] - 0.01
         else:
             return  # Invalid action
 
@@ -358,7 +358,7 @@ class PushingEnv(gym.Env):
 
         return reward
     
-    def objectOffTable(): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
+    def objectOffTable(self): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
                         # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
         return False
     
