@@ -145,31 +145,9 @@ class plotLogs():
         self.plotStates()
         plt.show()
 
-    def plot_log(self):
-
-        # Plot robot states
-        fig, axs = plt.subplots(3, 1, figsize=(10, 15))
-        fig.suptitle("Robot-States")
-        axs[0].set_title("x-coords")
-        for i in range(2):
-            axs[0].plot([state for state in robotStates_x], label=f'x_{i}')
-        axs[0].legend()
-
-        axs[1].set_title("y-coords")
-        for i in range(3 * self.maxObjects):
-            axs[1].plot([state for state in robotStates_y], label=f'y_{i}')
-        axs[1].legend()
-
-        # axs[2].set_title("angle")
-        # for i in range(len(goal_states[0])):
-        #     axs[2].plot([state for state in robotStates_deg], label=f'deg_{i}')
-        # axs[2].legend()
-
-        plt.show()
-
 def main():
     max_object = 16
-    log_path = r'/home/group1/workspace/src/log.json'
+    log_path = r'/home/group1/workspace/src/log copy.json'
     pL = plotLogs(max_object, log_path)
     pL.plotLog()
 
