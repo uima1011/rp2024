@@ -53,7 +53,6 @@ class PushingEnv(gym.Env):
         self.previous_distance = [None, None, None]
         self.nearest_object_id = None
         self.previous_nearest_object_id = None
-        self.dist_robot_all_obj = []
             
     def check_rectangle_overlap(self, rect1, rect2):
         """
@@ -259,47 +258,66 @@ class PushingEnv(gym.Env):
         )
         robot.lin(target_pose)
 
-    def get_dist_robot_all_obj(self):
+    #def get_dist_robot_all_obj(self):
+    #    current_pose = robot.get_eef_pose()
+    #    current_position = current_pose.translation
+    #    # checks distances of all objects to robot
+    #    # Get positions of all objects
+    #    objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
+    #    # Calculate distances to all objects
+    #    self.dist_robot_all_obj = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
+    #    return self.dist_robot_all_obj
+    
+    def get_dist_robot_objekt(self, obj_id):
         current_pose = robot.get_eef_pose()
         current_position = current_pose.translation
-        # checks distances of all objects to robot
-        # Get positions of all objects
-        objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
-        # Calculate distances to all objects
-        self.dist_robot_all_obj = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
-        return self.dist_robot_all_obj
+        obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
+        distance = np.linalg.norm(np.array(current_position) - np.array(obj_position))
+        return distance
     
-    def check_dist_all_obj_goal(self):
-        self.object_goal_distances = {}
-        for obj_type, obj_id_list in self.object_ids.items():
-            color = obj_type.split('_')[1]
-            goal_id = self.goal_ids[f'goal_{color}'][0]
-            goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
-            print(f"Goal ID: {goal_id}, Goal position for color {color}: {goal_position}")
+    def get_dist_robot_all_objects(self):
+        dist_list = []
+        for obj_id_list in self.object_ids.values():
             for obj_id in obj_id_list:
-                obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
-                distance = np.linalg.norm(np.array(obj_position) - np.array(goal_position))
-                print(f"Checking distance for object {obj_id} of color {color}")
-                print(f"Object position: {obj_position}, Distance to goal: {distance}")
-                self.object_goal_distances[obj_id] = distance
-        print("Object-goal distances:", self.object_goal_distances)
-        return self.object_goal_distances
+                self.get_dist_robot_objekt(obj_id)
+                dist_list.append(self.get_dist_robot_objekt(obj_id))
+        return dist_list
+
+    
+    #def dist_all_objects_goals(self):
+    #    self.object_goal_distances = {}
+    #    for obj_type, obj_id_list in self.object_ids.items():
+    #        color = obj_type.split('_')[1]
+    #        goal_id = self.goal_ids[f'goal_{color}'][0]
+    #        goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
+    #        for obj_id in obj_id_list:
+    #            obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
+    #            distance = np.linalg.norm(np.array(obj_position) - np.array(goal_position))
+    #            self.object_goal_distances[obj_id] = distance
+    #    return self.object_goal_distances
+
+    def get_dist_object_goal(self, obj_id):
+        color = obj_id.split('_')[1]
+        goal_id = self.goal_ids[f'goal_{color}'][0]
+        goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
+        obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
+    
+        return np.linalg.norm(np.array(obj_position) - np.array(goal_position))
+
 
     def object_inside_goal(self, obj_id): 
         # Check if object is inside goal area
-        self.check_dist_all_obj_goal()
-        # define max distance of object to goal area center point to be officially inside goal area
         dist_def_inside_goal = 0.05
-        if obj_id in self.object_goal_distances:
-            if self.object_goal_distances[obj_id] < dist_def_inside_goal:
-                return True
-        return False
+        if self.get_dist_object_goal(obj_id) < dist_def_inside_goal:
+            return True
+        else:
+            return False
     
-    def dist_robot_goal(self, nearest_obj_id):
+    def get_dist_robot_goal(self, nearest_obj_id):
         current_pose = robot.get_eef_pose()
         current_position = current_pose.translation
         if nearest_obj_id is None:
-            return 0
+            return None
         nearest_object_type = next(obj for obj in self.object_ids if nearest_obj_id in self.object_ids[obj])
         nearest_object_color = nearest_object_type.split('_')[1]
         goal_id = self.goal_ids[f'goal_{nearest_object_color}'][0]
@@ -307,44 +325,43 @@ class PushingEnv(gym.Env):
         distance_robot_goal = np.linalg.norm(np.array(current_position) - np.array(goal_position))
         return distance_robot_goal
 
-    def nearest_obj_to_robot(self):
+    def get_nearest_object_to_robot(self):
         while True:
-            if not self.dist_robot_all_obj:
-                self.get_dist_robot_all_obj()
-            min_dist_robot_onj = min(self.dist_robot_all_obj)
-            nearest_object_index = self.dist_robot_all_obj.index(min_dist_robot_onj)
-            nearest_object_id = [obj_id for obj_id_list in self.object_ids.values() for obj_id in obj_id_list][nearest_object_index]
-            # check if nearest object is inside goal area
-            if self.object_inside_goal(nearest_object_id):
-                print("Nearest object is inside goal area, finding next nearest object")
-                self.dist_robot_all_obj.pop(nearest_object_index)
-                if not self.dist_robot_all_obj:
-                    return None, None
-            else:
-                break
-        print("Nearest object ID:", nearest_object_id)
-        nearest_object_type = next(obj for obj in self.object_ids if nearest_object_id in self.object_ids[obj])
-        print("Nearest object type:", nearest_object_type)
-        print("Distance Robot to nearest object which is not in goal:", min_dist_robot_onj)
-        return min_dist_robot_onj, nearest_object_id
-        # after next step, self.get_dist_robot_all_obj() must be run through again to get the new distances --> still to implement
-    
+            if self.nearest_object_id is None: # wenn kein neares object bekannt (erster Schritt oder letztes im Ziel)
+                dist_robot_all_objects = self.get_dist_robot_all_objects()
+                min_dist_robot_obj = min(dist_robot_all_objects)
+                nearest_object_index = dist_robot_all_objects.index(min_dist_robot_obj)
+                nearest_object_id = [obj_id for obj_id_list in self.object_ids.values() for obj_id in obj_id_list][nearest_object_index]
+                # solange kein objekt gefunden wurde, welches nicht im goal ist, wird weitergesucht
+                while(not(self.object_inside_goal(nearest_object_id))):
+                    dist_robot_all_objects.pop(nearest_object_index)
+                    # prüfe ob Array leer
+                    if not dist_robot_all_objects:
+                        # TODO evlt self.done = True oder so
+                        return None, None   # alle Objekte im Ziel --> done
+                return min_dist_robot_obj, nearest_object_id
+            else: # wenn neares object bekannt: Abstandsberechnung
+                if self.object_inside_goal(nearest_object_id): # check if nearest object is inside goal area
+                    self.nearest_object_id = None
+                else: # Abstand berechnen
+                    self.get_dist_robot_all_objects()
+                    return min_dist_robot_obj, nearest_object_id    
 
     def distances_for_reward(self):
         self.previous_nearest_object_id = self.nearest_object_id
         # dictance robot to nearest object 
-        self.distance[0], self.nearest_object_id = self.nearest_obj_to_robot()
+        self.distance[0], self.nearest_object_id = self.get_nearest_object_to_robot()
         if (self.nearest_object_id != self.previous_nearest_object_id):
             # set previous distance to new nearest obj
             self.previous_distance[0] = self.distance[0]
-            self.previous_distance[1] = self.object_goal_distances.get(self.nearest_object_id, float('inf'))
-            self.previous_distance[2] = self.dist_robot_goal(self.nearest_object_id)
+            self.previous_distance[1] = self.get_dist_object_goal(self.nearest_object_id)
+            self.previous_distance[2] = self.get_dist_robot_goal(self.nearest_object_id)
             reward = 15
             return reward
         # distance of that object to its goal
-        self.distance[1] = self.object_goal_distances.get(self.nearest_object_id, float('inf'))
+        self.distance[1] = self.get_dist_object_goal(self.nearest_object_id)
         #distance of robot to goal for nearest object
-        self.distance[2] = self.dist_robot_goal(self.nearest_object_id)
+        self.distance[2] = self.get_dist_robot_goal(self.nearest_object_id)
         #remeber distances for next step
         reward = 0
         if self.previous_distance[0] > self.distance[0]:
