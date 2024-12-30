@@ -11,6 +11,7 @@ import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
 import json
 
+
 # Setup
 RENDER = True
 URDF_PATH = "/home/group1/workspace/assets/urdf/robot_without_gripper.urdf"
@@ -399,8 +400,6 @@ class PushingEnv(gym.Env):
         with open(self.log_path, mode='w') as file:
             json.dump(self.log_data, file, indent=4)
         self.step_count += 1
-
-    # TODO implement plot function again? (@Philipp: dass sie je existierte ist ein Mythos)
 
     def step(self, action):
         self.perform_action(action)
