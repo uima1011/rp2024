@@ -353,7 +353,7 @@ class PushingEnv(gym.Env):
         if self.previous_distance[2] > self.distance[2]:
             reward -= 0.5   
         
-        self.previous_distance = self.distance
+        self.previous_distance = self.distance.copy()
 
         return reward
     
