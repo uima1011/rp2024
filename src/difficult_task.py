@@ -49,8 +49,11 @@ class PushingEnv(gym.Env):
         self.step_count = 0
         self.log_path = "/home/group1/workspace/src/log.json"
         self.log_data = []
-        self.previous_distance = None
+        self.previous_distance = []
+        self.distance = []
         self.nearest_object_id = None
+        self.previous_nearest_object_id = None
+        self.dist_robot_all_obj = []
             
     def check_rectangle_overlap(self, rect1, rect2):
         """
@@ -328,93 +331,36 @@ class PushingEnv(gym.Env):
     
 
     def distances_for_reward(self):
+        self.previous_nearest_object_id = self.nearest_object_id
         # dictance robot to nearest object 
-        dist_robot_obj, self.nearest_object_id = self.nearest_obj_to_robot()
+        self.distance[0], self.nearest_object_id = self.nearest_obj_to_robot()
+        if (self.nearest_object_id != self.previous_nearest_object_id):
+            # set previous distance to new nearest obj
+            self.previous_distance[0] = self.distance[0]
+            self.previous_distance[1] = self.object_goal_distances.get(self.nearest_object_id, float('inf'))
+            self.previous_distance[2] = self.dist_robot_goal(self.nearest_object_id)
+            reward = 15
+            return reward
         # distance of that object to its goal
-        dist_obj_goal = self.object_goal_distances.get(self.nearest_object_id, float('inf'))
-        self.previous_distance = dist_robot_obj
-
-        '''
-        current_pose = robot.get_eef_pose()
-        current_position = current_pose.translation
-
-        if self.nearest_object_id is None:
-            # Get positions of all objects
-            objects_positions = [bullet_client.getBasePositionAndOrientation(obj_id)[0] for obj_id_list in self.object_ids.values() for obj_id in obj_id_list]
-            
-            # Calculate distances to all objects
-            distances = [np.linalg.norm(np.array(current_position) - np.array(obj_pos)) for obj_pos in objects_positions]
-            
-            # Find the nearest object
-            dist_next_obj = min(distances)
-            print("distance to nearest object:", dist_next_obj)
-            self.nearest_object_id = next(obj_id for obj_id_list in self.object_ids.values() for obj_id in obj_id_list if np.linalg.norm(np.array(current_position) - np.array(bullet_client.getBasePositionAndOrientation(obj_id)[0])) == dist_next_obj)
-            print("Nearest object ID:", self.nearest_object_id)
-            self.nearest_object_type = next(obj for obj in self.object_ids if self.nearest_object_id in self.object_ids[obj])
-            print("Nearest object type:", self.nearest_object_type)
-            self.previous_distance = dist_next_obj
-        else:
-            print("object where heading to: ", self.nearest_object_id, self.nearest_object_type)
-            nearest_object_position = bullet_client.getBasePositionAndOrientation(self.nearest_object_id)[0]
-            dist_next_obj = np.linalg.norm(np.array(current_position) - np.array(nearest_object_position))
-            print("distance to object headed to:", dist_next_obj)
-
-        # Calculate reward
-        if dist_next_obj < self.previous_distance:
-            reward = 1
-        else:
-            reward = 0
-        
-        self.previous_distance = dist_next_obj
-        #return reward, self.nearest_object_id
-        return reward
-        '''
-
-    '''
-    def reward_dist_obj_goal(self, nearest_object_id):
-        current_pose = robot.get_eef_pose()
-        current_position = current_pose.translation
-
-        if nearest_object_id is None:
-            return 0
-
-        nearest_object_position = bullet_client.getBasePositionAndOrientation(nearest_object_id)[0]
-        dist_to_object = np.linalg.norm(np.array(current_position) - np.array(nearest_object_position))
-
-        # Get the goal position for the nearest object
-        nearest_object_type = next(obj for obj in self.object_ids if nearest_object_id in self.object_ids[obj])
-        goal_id = self.goal_ids[f'goal_{nearest_object_type.split("_")[1]}'][0]
-        goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
-        dist_to_goal = np.linalg.norm(np.array(nearest_object_position) - np.array(goal_position))
-
-        # Reward for moving the object closer to the goal
-        if dist_to_goal < self.previous_distance:
-            reward = 10
-        else:
-            reward = 0
-
-        self.previous_distance = dist_to_goal
-        
-        return reward
-    '''
-    '''
-    def compute_reward(self):  # TODO check if function is working / fix
-        reward = self.calculate_reward()
+        self.distance[1] = self.object_goal_distances.get(self.nearest_object_id, float('inf'))
+        #distance of robot to goal for nearest object
+        self.distance[2] = self.dist_robot_goal(self.nearest_object_id)
+        #remeber distances for next step
         reward = 0
-        for obj_id, target_color in zip(self.object_ids, self.target_colors):
-            obj_pos = bullet_client.getBasePositionAndOrientation(obj_id)[0]
-            target_pos = self.target_positions[target_color]
-            distance = np.linalg.norm(np.array(obj_pos) - np.array(target_pos))
-            reward -= distance
-        if False: # TODO if no nearest object do...
-            reward += 100
-        # implement more rewards
+        if self.previous_distance[0] > self.distance[0]:
+            reward += 1
+        if self.previous_distance[1] > self.distance[1]:
+            reward += 10        
+        if self.previous_distance[2] > self.distance[2]:
+            reward -= 0.5   
+        
+        self.previous_distance = self.distance
+
         return reward
-    '''
     
     def objectOffTable(): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
                         # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
-        return True
+        return False
     
     def start_pose(self):
         robot.home()
@@ -459,8 +405,8 @@ class PushingEnv(gym.Env):
 
     def step(self, action):
         self.perform_action(action)
-        reward = np.random.uniform(-1000, 1000) #self.compute_reward() # TODO: for testing, uncomment reward function later
-        
+        reward = self.distances_for_reward()
+
         max_steps = 1000 # TODO: think about max steps after which episode is terminated
         if self.step_count >= max_steps:
             truncated = True
@@ -471,6 +417,9 @@ class PushingEnv(gym.Env):
         #   done = True
         # if no neuarest object = None, task is done
         done = False # TODO: terminal condition if goal is achieved
+        if(self.objectOffTable()):
+            done = True
+            reward = -1000
 
         print(f"\rEpisode {self.episode}, Step {self.step_count}: Reward: {reward}, Done: {done}, Action: {action}", end="")
         state = self.get_state()
@@ -509,56 +458,7 @@ def train(environment):
 
 def main():
     env = PushingEnv()
-    #train(env)
-    env.reset()
-    print("State:", env.get_state())
-    # print("State dimension:", env.state_dim)
-    # print(len(env.get_state()))
-    # print(env.get_state())
-    #print(env.state_dim)
-    #print(env.observation_space)
-    #env.log_step(1, 1000, env.get_state(), False)
-    #train(env)
-    
-    env.check_dist_all_obj_goal()
-    input("Press Enter to continue...")
-    
-    env.start_pose()
-    reward_dist_robot_obj = env.nearest_obj_to_robot()
-    print("Current Reward for Robot to Object in start pose:", reward_dist_robot_obj)
-    
-    '''
-    input("Press Enter to continue...")
-    move_forward()
-    reward, env.nearest_object_id = env.reward_dist_robot_obj()
-    print("Current Reward for Robot to Object after moving 1 forward:", reward_dist_robot_obj)
-    '''
-
-    input("Press Enter to continue...")
-    env.perform_action(1)  # Move forward
-    reward_dist_robot_obj = env.nearest_obj_to_robot()
-    print("Current Reward for Robot to Object after moving 2 forward:", reward_dist_robot_obj)
-
-    input("Press Enter to continue...")
-    env.perform_action(2)  # Move right
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  3 forward:", reward_dist_robot_obj)
-
-    input("Press Enter to continue...")
-    env.perform_action(1)  # Move forward
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  4 forward:", reward_dist_robot_obj)
-    
-    input("Press Enter to continue...")
-    env.perform_action(2)  # Move right
-    reward_dist_robot_obj = env.nearest_obj_to_robot() 
-    print("Current Reward for Robot to Object after moving  5 forward:", reward_dist_robot_obj)
-
-    # Wichtig: wenn Objekt im Ziel ist, muss self.nearest_object_id = None gesetzt werden und self.previous_distance = None
-    input("Press Enter to continue...") 
-    bullet_client.disconnect()  
-
-    # Bewegungen um Faktor 10 in perform_action erhöht (zurück auf 0.01 stellen)
+    train(env)
 
 if __name__ == "__main__":
     main()
