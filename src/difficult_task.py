@@ -383,6 +383,10 @@ class PushingEnv(gym.Env):
         self.generateGoalAreas()
         self.episode += 1
         self.step_count = 0
+        self.distance = [None, None, None]
+        self.previous_distance = [None, None, None]
+        self.nearest_object_id = None
+        self.previous_nearest_object_id = None
 
         # Berechne die Beobachtungsraumdimension basierend auf dem Zustand
         state = self.get_state()
