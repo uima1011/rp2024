@@ -348,13 +348,13 @@ class PushingEnv(gym.Env):
         #remeber distances for next step
         reward = 0
         if abs(self.previous_distance[0] - self.distance[0]) > 0.002:
-            reward += 0.2
+            reward += 0.9
         else:
-            reward -= 0.2
+            reward -= 0.9
         if abs(self.previous_distance[1] - self.distance[1]) > 0.002:
-            reward += 1
+            reward += 5
         else:
-            reward -= 1
+            reward -= 0
         if abs(self.previous_distance[2] - self.distance[2]) > 0.002:
             reward -= 0.1
         else:
@@ -439,7 +439,7 @@ def train(environment):
     env = DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
-    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.01, verbose=1)
+    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.001, verbose=1)
 
     # Training starten
     # falls ein existierendes model weitertrainiert werden soll:
