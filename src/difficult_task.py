@@ -328,7 +328,7 @@ class PushingEnv(gym.Env):
                     self.nearest_object_id = None
                 else: # Abstand berechnen
                     dist = self.get_dist_robot_object(self.nearest_object_id)
-                return dist, self.nearest_object_id    
+                    return dist, self.nearest_object_id    
 
     def distances_for_reward(self):
         self.previous_nearest_object_id = self.nearest_object_id
@@ -348,13 +348,13 @@ class PushingEnv(gym.Env):
         #remeber distances for next step
         reward = 0
         if abs(self.previous_distance[0] - self.distance[0]) > 0.002:
+            reward += 0.2
+        else:
+            reward -= 0.2
+        if abs(self.previous_distance[1] - self.distance[1]) > 0.002:
             reward += 1
         else:
             reward -= 1
-        if abs(self.previous_distance[1] - self.distance[1]) > 0.002:
-            reward += 10
-        else:
-            reward -= 10
         if abs(self.previous_distance[2] - self.distance[2]) > 0.002:
             reward -= 0.1
         else:
@@ -435,7 +435,7 @@ def train(environment):
     env = DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
-    model = PPO("MlpPolicy", env, verbose=1)
+    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.01, verbose=1)
 
     # Training starten
     # falls ein existierendes model weitertrainiert werden soll:
