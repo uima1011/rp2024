@@ -416,7 +416,7 @@ class PushingEnv(gym.Env):
         self.perform_action(action)
         reward = self.distances_for_reward()
 
-        max_steps = 100 # TODO: think about max steps after which episode is terminated
+        max_steps = 99 # TODO: think about max steps after which episode is terminated
         if self.step_count >= max_steps:
             truncated = True
         else:
@@ -436,7 +436,7 @@ class PushingEnv(gym.Env):
         return state, reward, done, truncated, info
     
 def train(environment):
-    TIMESTEPS = 100 # Anzahl der Trainingsschritte
+    TIMESTEPS = 5 # Anzahl der Trainingsschritte
     MODEL = PPO
     models_dir = f"data/models/{MODEL}"
     if not os.path.exists(models_dir):
@@ -448,11 +448,11 @@ def train(environment):
     if not os.path.exists(logdir):
         os.makedirs(logdir)
     # Umgebung erstellen
-    env = DummyVecEnv([lambda: environment])
+    env = environment #DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
-    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.001, verbose=1, tensorboard_log=logdir)
-
+    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.001, verbose=1, n_steps=100, tensorboard_log=logdir)
+ 
     # Training starten
     # falls ein existierendes model weitertrainiert werden soll:
     # model = PPO.load("/home/group1/workspace/data/train/pushing_policy_new_3", env=env, verbose=1, tensorboard_log=logdir)
