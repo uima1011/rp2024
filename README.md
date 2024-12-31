@@ -22,3 +22,8 @@ in terminal:
 * `./build_image.sh`
 * `./run_container.sh`
 * `python ./difficult_task.py`
+
+## View training
+* train the model
+* in new terminal from docker path: `tensorboard --logdir=data/logs`
+* open tensorboard localhost via the created link
