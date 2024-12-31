@@ -10,6 +10,7 @@ class plotLogs():
         self.rewards = []
         self.actions = []
         self.steps = []
+        self.episodes = []
         self.statesDict = {}
 
     def readJSON(self):
@@ -20,6 +21,7 @@ class plotLogs():
         self.rewards = [entry["Reward"] for entry in self.logData]
         self.action = [entry["Action"] for entry in self.logData]
         self.steps = [entry["Step"] for entry in self.logData]
+        self.episodes = [entry["Episode"] for entry in self.logData]
         self.states = [entry["State"] for entry in self.logData]
 
     def getStates(self):
@@ -147,7 +149,7 @@ class plotLogs():
 
 def main():
     max_object = 16
-    log_path = r'/home/group1/workspace/src/log copy.json'
+    log_path = r'/home/group1/workspace/src/log.json'
     pL = plotLogs(max_object, log_path)
     pL.plotLog()
 
