@@ -10,7 +10,7 @@ import gymnasium as gym
 import gymnasium as gym
 from scipy.spatial.transform import Rotation as R
 import json
-
+import os
 
 # Setup
 RENDER = True
@@ -275,16 +275,16 @@ class PushingEnv(gym.Env):
         return dist_list
 
     def get_dist_object_goal(self, obj_id):
-        # Prüfe, welcher Key in object_ids das obj_id enthält
-        for obj_type, obj_id_list in self.object_ids.items():
-            if obj_id in obj_id_list:
-                color = obj_type.split('_')[1]  # Extrahiere die Farbe aus dem Key
-                goal_id = self.goal_ids[f'goal_{color}'][0]
-                goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0]
-                obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0]
-                return np.linalg.norm(np.array(obj_position) - np.array(goal_position))
-    
-        raise ValueError(f"Objekt-ID {obj_id} nicht in object_ids gefunden.")
+        nearest_object_type = next((obj for obj in self.object_ids if obj_id in self.object_ids[obj]), None) # get key which contains obj id
+        if nearest_object_type is None: # id not found in dict
+            raise ValueError(f"Object ID {obj_id} not found in object_ids.")
+        
+        nearest_object_color = nearest_object_type.split('_')[1] # get colour from key name
+        goal_id = self.goal_ids[f'goal_{nearest_object_color}'][0] # get goal id by colour
+        goal_position = bullet_client.getBasePositionAndOrientation(goal_id)[0] # get goal position by id
+        obj_position = bullet_client.getBasePositionAndOrientation(obj_id)[0] # get object position by id
+
+        return np.linalg.norm(np.array(obj_position) - np.array(goal_position)) # calc distance betweeen object and goal
 
     def object_inside_goal(self, obj_id): 
         # Check if object is inside goal area
@@ -328,6 +328,7 @@ class PushingEnv(gym.Env):
                     self.nearest_object_id = None
                 else: # Abstand berechnen
                     dist = self.get_dist_robot_object(self.nearest_object_id)
+                    return dist, self.nearest_object_id    
                     return dist, self.nearest_object_id    
 
     def distances_for_reward(self):
@@ -435,20 +436,31 @@ class PushingEnv(gym.Env):
         return state, reward, done, truncated, info
     
 def train(environment):
+    TIMESTEPS = 100 # Anzahl der Trainingsschritte
+    MODEL = PPO
+    models_dir = f"data/models/{MODEL}"
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+    logdir = "data/logs"
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
     # Umgebung erstellen
     env = DummyVecEnv([lambda: environment])
 
     # PPO-Modell initialisieren
-    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.001, verbose=1)
+    model = PPO("MlpPolicy", env, gamma = 0.99, ent_coef=0.001, verbose=1, tensorboard_log=logdir)
 
     # Training starten
     # falls ein existierendes model weitertrainiert werden soll:
-    # model = PPO.load("existing_pushing_policy", env=env)
+    # model = PPO.load("/home/group1/workspace/data/train/pushing_policy_new_3", env=env, verbose=1, tensorboard_log=logdir)
     print("Training beginnt...")
-    model.learn(total_timesteps=100)  # Anzahl der Trainingsschritte
-
-    # Modell speichern
-    model.save("pushing_policy")
+    for i in range(5): # limit to 30*TIMESTEPS = 30k steps
+        model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")  # Anzahl der Trainingsschrittes
+        model.save(f'{models_dir}/{TIMESTEPS*i}')
+        print(f'Iteration: {i}')
     print("Training abgeschlossen und Modell gespeichert.")
 
     # Testphase (optional)
