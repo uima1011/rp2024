@@ -436,12 +436,12 @@ class PushingEnv(gym.Env):
         return state, reward, done, truncated, info
     
 def train(environment):
-    TIMESTEPS = 5 # Anzahl der Trainingsschritte
-    MODEL = PPO
-    models_dir = f"data/models/{MODEL}"
+    TIMESTEPS = 200 # Anzahl der Trainingsschritte
+    MODEL = "PPO"
+    models_dir = f"/home/group1/workspace/data/models/{MODEL}"
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
-    logdir = "data/logs"
+    logdir = "/home/group1/workspace/data/logs"
     if not os.path.exists(logdir):
         os.makedirs(logdir)
 
@@ -457,10 +457,10 @@ def train(environment):
     # falls ein existierendes model weitertrainiert werden soll:
     # model = PPO.load("/home/group1/workspace/data/train/pushing_policy_new_3", env=env, verbose=1, tensorboard_log=logdir)
     print("Training beginnt...")
-    for i in range(5): # limit to 30*TIMESTEPS = 30k steps
+    for i in range(1, 5): # limit to 30*TIMESTEPS = 30k steps
         model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")  # Anzahl der Trainingsschrittes
         model.save(f'{models_dir}/{TIMESTEPS*i}')
-        print(f'Iteration: {i}')
+        print(f'Iteration abgeschlossen: {i}')
     print("Training abgeschlossen und Modell gespeichert.")
 
     # Testphase (optional)
