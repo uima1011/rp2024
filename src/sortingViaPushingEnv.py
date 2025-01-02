@@ -42,11 +42,11 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv.performAction(action)
         # get deltaReward
 		self.totalReward = self.calcReward.calcReward()
-		info = {'Step': self.stepCount, 'totalReward': self.totalReward, 'prevReward': self.prevReward} # additional debug informations
+		info = {'Step': self.stepCount, 'Reward': {'total': self.totalReward, 'previous': self.prevReward}, 'action': action} # additional debug informations
 		self.reward = self.totalReward - self.prevReward
 		self.prevReward = self.totalReward
 		
-		self.done = False # TODO turn True if object falls from table and give ultra bad reward
+		self.done = self.hdlEnv.checkMisbehaviour() # TODO turn True if object falls from table and give ultra bad reward
 		if self.stepCount >= MAX_STEPS-1:
 			truncated = True
 		else:
