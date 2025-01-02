@@ -30,4 +30,3 @@ for episode in range(episodes):
         action = moveRobotKeyboard() # manual actions
         if action is not None:
             obs, reward, done, truncated, info = env.step(action)
-            print(info)
