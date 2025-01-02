@@ -130,6 +130,19 @@ class HandleEnvironment():
             rotation=fixed_orientation  # Set the fixed orientation
         )
         self.robot.lin(target_pose)
+    
+    def objectOffTable(self):
+        '''checks objects positions z height and returns true if its under the table'''
+        return False
+
+    def robotLeavedWorkArea(self):
+        '''returns True if robot out of Area'''
+        return False
+    
+    def checkMisbehaviour(self):
+        '''check behaviour of robot and objects and return true if something misbehaves'''
+        misbehaviour = self.objectOffTable() | self.robotLeavedWorkArea()
+        return misbehaviour
 
 class HandleObjects():
     def __init__(self, assets_folder):
@@ -317,6 +330,8 @@ class CalcReward():
             else:
                 reward -= 1 # penalty opposite of above
             return reward
+        
+    
             
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
