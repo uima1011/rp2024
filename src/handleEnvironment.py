@@ -144,12 +144,14 @@ class HandleEnvironment():
 
     def objectOffTable(self):
         for key , values in self.IDs.items():
-            for id in values:
-                pos,_ = self.bullet_client.getBasePositionAndOrientation(id)
-                z = pos[2]
-                if z < 0: 
-                    print(f"Object {key} with ID {id} is off the table")
-                    return True
+            if 'goal' not in key and 'robot' not in key:
+                for id in values:
+                    pos,_ = self.bullet_client.getBasePositionAndOrientation(id)
+                    z = pos[2]
+                    if z < 0: 
+                        print(f"Object {key} with ID {id} is off the table")
+                        return True
+        print("All objects are on the table")
         return False
 
     def checkMisbehaviour(self):
