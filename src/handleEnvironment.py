@@ -25,9 +25,7 @@ class HandleEnvironment():
         if not render:
             self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
-        self.bullet_client.resetSimulation()
         self.robot = BulletRobot(bullet_client=self.bullet_client, urdf_path=self.urdfPathRobot)
-        self.robot.home()
 
     def resetEnvironment(self):
         self.bullet_client.resetSimulation()
