@@ -25,7 +25,9 @@ episodes = 50
 for episode in range(episodes):
     done = False
     obs = env.reset()
-    while True: #not done:
+    if episode >0: 
+        print(f"Error: Environment was resetted (presumably after misbehaviour of robot / objects). Episode: {episode}")
+    while done==False: #not done:
         # action = env.action_space.sample() # random actions
         # state_obj_z = handle_objects_instance.get_state_obj_z()
         # print(f"State object z: {state_obj_z}")

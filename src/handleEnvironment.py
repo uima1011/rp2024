@@ -149,14 +149,15 @@ class HandleEnvironment():
                     pos,_ = self.bullet_client.getBasePositionAndOrientation(id)
                     z = pos[2]
                     if z < 0: 
-                        print(f"Object {key} with ID {id} is off the table")
+                        print(f"Error: Object {key} with ID {id} is off the table")
                         return True
-        print("All objects are on the table")
         return False
 
     def checkMisbehaviour(self):
         '''check behaviour of robot and objects and return true if something misbehaves'''
         misbehaviour = self.objectOffTable() | self.robotLeavedWorkArea()
+        if misbehaviour==True:
+            print(f"Misbehaviour: {misbehaviour}")
         return misbehaviour
     
 
