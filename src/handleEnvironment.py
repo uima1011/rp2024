@@ -363,15 +363,7 @@ class CalcReward():
         elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005:
             reward += 0.1
 
-        # print all distances and previous distances
-        print(f"Distance Robot to Object: {self.distRobToObj}")
-        print(f"Prewious Distance Robot to Object: {self.prevDistRobToObj}")
-        print(f"Distance Object to Goal: {self.distObjToGoal}")
-        print(f"Previous Distance Object to Goal: {self.prevDistObjToGoal}")
-        print(f"Distance Robot to Goal: {self.distRobToGoal}")
-        print(f"Previous Distance Robot to Goal: {self.prevDistRobToGoal}")
-
-        print(f"Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
 
         
         self.prevDistRobToObj = self.distRobToObj
