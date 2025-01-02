@@ -148,6 +148,7 @@ class HandleEnvironment():
                 pos,_ = self.bullet_client.getBasePositionAndOrientation(id)
                 z = pos[2]
                 if z < 0: 
+                    print(f"Object {key} with ID {id} is off the table")
                     return True
         return False
 
@@ -160,8 +161,8 @@ class HandleEnvironment():
 class HandleObjects():
     def __init__(self, assets_folder):
         self.tableCords = {
-                    'x':[0.9, 1.9], # min, max
-                    'y':[0.29, 1.29]
+                    'x':[0.3, 0.9], # min, max
+                    'y':[-0.29, 0.29]
                     }
         self.objectWidth = 0.05
         self.goalWidths = {
@@ -215,7 +216,6 @@ class HandleObjects():
                         self.objects[f'{part}_{col}']['urdfPath'] = urdfPath
                         if objectPose is not None:
                             self.objects[f'{part}_{col}']['poses'].append(objectPose)
-                            print(f"Object {part}_{col} spawned at {objectPose.translation}")
                             spawned_count += 1
                             break
                     else:

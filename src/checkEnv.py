@@ -29,8 +29,7 @@ for episode in range(episodes):
         # action = env.action_space.sample() # random actions
         # state_obj_z = handle_objects_instance.get_state_obj_z()
         # print(f"State object z: {state_obj_z}")
-
-        input("Press Enter to continue...")
+        # input("Press Enter to continue...")
         action = moveRobotKeyboard() # manual actions
         if action is not None:
             obs, reward, done, truncated, info = env.step(action)
