@@ -8,7 +8,7 @@ RENDER = True
 ASSETS_PATH = "/home/group1/workspace/assets"
 
 # Train:
-MAX_STEPS = 100
+MAX_STEPS = 1000
 
 # Environment
 colours = ['green', 'red']
