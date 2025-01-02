@@ -226,7 +226,6 @@ class HandleObjects():
             print('Error: Could not generate any objects')
             return None
         else:
-            print("Some Objects failed to generate")
             return self.objects
         
     def get_state_obj_z(self):
@@ -306,29 +305,31 @@ class CalcReward():
             return False
         
     def getNearestObjToRob(self):
-        # TODO check while true
-        if self.nearObjectID is None: # first or last step
-            minDistance = float('inf')
-            for key, positionsDict in self.positions.items():
-                if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
-                    # Check each position for an object (in case of multiple positions like 'plus_red')
-                    for id, obj_position in positionsDict.items():
-                        distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                        if distance < minDistance: # new minDistance and objekt outside of goal
-                            if not self.checkObjectInsideGoal(id):
-                                minDistance = distance
-                                self.nearObjectID = id
-                                return minDistance, self.nearObjectID
-        else:
-            if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
-                    self.nearObjectID = None
-                    dist = None
-            else:  # Abstand berechnen
+        while(True):
+            if self.nearObjectID is None: # first or last step
+                minDistance = float('inf')
                 for key, positionsDict in self.positions.items():
-                    if self.nearObjectID in positionsDict:
-                        dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
-                        break
-            return dist, self.nearObjectID    
+                    if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
+                        # Check each position for an object (in case of multiple positions like 'plus_red')
+                        for id, obj_position in positionsDict.items():
+                            distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                            if distance < minDistance: # new minDistance and objekt outside of goal
+                                if not self.checkObjectInsideGoal(id):
+                                    minDistance = distance
+                                    self.nearObjectID = id
+                if self.nearObjectID is None:
+                    return None, None        
+                return minDistance, self.nearObjectID
+            else:
+                if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
+                        self.nearObjectID = None
+                        dist = None
+                else:  # Abstand berechnen
+                    for key, positionsDict in self.positions.items():
+                        if self.nearObjectID in positionsDict:
+                            dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
+                            break
+                    return dist, self.nearObjectID    
 
 
     def getDistObjToGoal(self, objID):
@@ -375,15 +376,7 @@ class CalcReward():
         elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005:
             reward += 0.1
 
-        # print all distances and previous distances
-        print(f"Distance Robot to Object: {self.distRobToObj}")
-        print(f"Prewious Distance Robot to Object: {self.prevDistRobToObj}")
-        print(f"Distance Object to Goal: {self.distObjToGoal}")
-        print(f"Previous Distance Object to Goal: {self.prevDistObjToGoal}")
-        print(f"Distance Robot to Goal: {self.distRobToGoal}")
-        print(f"Previous Distance Robot to Goal: {self.prevDistRobToGoal}")
-
-        print(f"Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
 
         
         self.prevDistRobToObj = self.distRobToObj

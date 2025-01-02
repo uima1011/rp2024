@@ -8,7 +8,7 @@ RENDER = True
 ASSETS_PATH = "/home/group1/workspace/assets"
 
 # Train:
-MAX_STEPS = 100
+MAX_STEPS = 1000
 
 # Environment
 colours = ['green', 'red']
@@ -39,7 +39,7 @@ class sortingViaPushingEnv(gym.Env):
         # get deltaReward
 		self.reward = self.calcReward.calcReward()
 		info = {'Step': self.stepCount, 'Reward': self.reward, 'action': action} # additional debug informations
-		
+		print(info)
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True

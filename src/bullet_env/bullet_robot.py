@@ -114,7 +114,7 @@ class BulletRobot:
         return Affine(position, orientation)
 
     def schedule_sequence(self, sequence):
-        logger.debug(f"Scheduling sequence with {len(sequence)} steps")
+        # logger.debug(f"Scheduling sequence with {len(sequence)} steps")
 
         self.current_sequence = [self.solve_position_ik(pose) for pose in sequence]
         self.target_joint_positions = self.current_sequence.pop(0)
@@ -141,7 +141,7 @@ class BulletRobot:
         self.wait_for_movement()
 
     def lin(self, pose: Affine):
-        logger.debug(f"Linearly interpolating to pose {pose}")
+        # logger.debug(f"Linearly interpolating to pose {pose}")
         lin_step_size = 0.05
         current_pose = self.get_eef_pose()
         steps = current_pose.interpolate_to(pose, lin_step_size)
