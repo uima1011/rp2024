@@ -29,7 +29,5 @@ for episode in range(episodes):
         # action = env.action_space.sample() # random actions
         action = moveRobotKeyboard() # manual actions
         if action is not None:
-            print("action", action)
             obs, reward, done, truncated, info = env.step(action)
-            print('reward',reward)
             print(info)
