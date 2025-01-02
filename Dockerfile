@@ -67,7 +67,6 @@ RUN pip install --no-cache-dir --timeout=600 pybullet
 RUN pip install --no-cache-dir loguru
 RUN pip install --no-cache-dir scipy
 RUN pip install --no-cache-dir --timeout=10000 stable-baselines3[extra]
-RUN pip install --no-cache-dir gym
 RUN pip install --no-cache-dir "shimmy>=2.0"
 
 ENV PYTHONPATH=/home/$USER/workspace/src:$PYTHONPATH
