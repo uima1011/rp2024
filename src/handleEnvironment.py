@@ -293,29 +293,31 @@ class CalcReward():
             return False
         
     def getNearestObjToRob(self):
-        # TODO check while true
-        if self.nearObjectID is None: # first or last step
-            minDistance = float('inf')
-            for key, positionsDict in self.positions.items():
-                if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
-                    # Check each position for an object (in case of multiple positions like 'plus_red')
-                    for id, obj_position in positionsDict.items():
-                        distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                        if distance < minDistance: # new minDistance and objekt outside of goal
-                            if not self.checkObjectInsideGoal(id):
-                                minDistance = distance
-                                self.nearObjectID = id
-                                return minDistance, self.nearObjectID
-        else:
-            if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
-                    self.nearObjectID = None
-                    dist = None
-            else:  # Abstand berechnen
+        while(True):
+            if self.nearObjectID is None: # first or last step
+                minDistance = float('inf')
                 for key, positionsDict in self.positions.items():
-                    if self.nearObjectID in positionsDict:
-                        dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
-                        break
-            return dist, self.nearObjectID    
+                    if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
+                        # Check each position for an object (in case of multiple positions like 'plus_red')
+                        for id, obj_position in positionsDict.items():
+                            distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                            if distance < minDistance: # new minDistance and objekt outside of goal
+                                if not self.checkObjectInsideGoal(id):
+                                    minDistance = distance
+                                    self.nearObjectID = id
+                if self.nearObjectID is None:
+                    return None, None        
+                return minDistance, self.nearObjectID
+            else:
+                if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
+                        self.nearObjectID = None
+                        dist = None
+                else:  # Abstand berechnen
+                    for key, positionsDict in self.positions.items():
+                        if self.nearObjectID in positionsDict:
+                            dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
+                            break
+                    return dist, self.nearObjectID    
 
 
     def getDistObjToGoal(self, objID):
