@@ -331,6 +331,7 @@ class CalcReward():
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
 
     def calcReward(self):
+        self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
         # dictance robot to nearest object 
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
@@ -374,11 +375,7 @@ def main():
 
     hEnv.robotToStartPose()
     calcRew = CalcReward(hEnv)
-    reward = calcRew.calcReward()
-    reward = calcRew.calcReward()
-    reward = calcRew.calcReward()
-    reward = calcRew.calcReward()
-    reward = calcRew.calcReward()
+
     # ids = hEnv.getIDs()
     # pprint(ids)
   
