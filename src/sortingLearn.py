@@ -17,7 +17,7 @@ if not os.path.exists(logDir):
 env = svpEnv()
 env.reset()
 
-model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logDir)
+model = PPO('MlpPolicy', env, gamma = 0.99, ent_coef=0.01, verbose=1, tensorboard_log=logDir)
 # model = PPO.load("/home/group1/workspace/data/models/{MODEL}/XXXXX.zip", env=env, verbose=1, tensorboard_log=logDir) # use existing model
 
 iters = 0
