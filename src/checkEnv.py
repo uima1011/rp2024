@@ -4,7 +4,7 @@ env = svpEnv()
 
 # Test 1:
 # uncomment and comment rest of file for first check, then proceed with test 2
-check_env(env)
+# check_env(env)
 
 # Test 2:
 def moveRobotKeyboard():
