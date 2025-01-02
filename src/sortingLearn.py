@@ -1,8 +1,6 @@
 from stable_baselines3 import PPO
 import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
-import time
-
 
 TIMESTEPS = 10000
 MODEL = "PPO"
