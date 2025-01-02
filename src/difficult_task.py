@@ -364,8 +364,13 @@ class PushingEnv(gym.Env):
 
         return reward
     
-    def objectOffTable(self): # TODO prüfen und wenn true, dann done = True, reward = sehr schlecht,
-                        # aber erste wenn es auftritt, evtl. nicht möglich durch "Standardrewards"
+    def objectOffTable(self): 
+        for obj_id_list in self.object_ids.values():
+            for obj_id in obj_id_list:
+                position, _ = bullet_client.getBasePositionAndOrientation(obj_id)
+                if position[2] < 0:
+                    return True
+        # as soon as one object falls off the table, function gives True            
         return False
     
     def start_pose(self):
@@ -424,7 +429,8 @@ class PushingEnv(gym.Env):
         # if(getNearestObjectRobot()==None):
         #   done = True
         # if no neuarest object = None, task is done
-        done = False # TODO: terminal condition if goal is achieved
+        done = False # checks every step if at least one object has fallen off the table 
+        # no matter which object has fallen off the table
         if(self.objectOffTable()):
             done = True
             reward = -1000
