@@ -38,13 +38,13 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv.performAction(action)
         # get deltaReward
 		self.reward = self.calcReward.calcReward()
-		info = {'Step': self.stepCount, 'Reward': self.reward, 'action': action} # additional debug informations
-		print(info)
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
 		else:
-			self.truncated = False
+			self.truncated = False # TODO ist das nicht sowieso schon false?
+		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Done': self.done, 'Truncated': self.truncated}
+		print(info)
 		self.stepCount += 1
 		observation = self.hdlEnv.getStates()
 		return observation, self.reward, self.done, self.truncated, info
