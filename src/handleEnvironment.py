@@ -218,7 +218,6 @@ class HandleObjects():
             print('Error: Could not generate any objects')
             return None
         else:
-            print("Some Objects failed to generate")
             return self.objects
 
     
