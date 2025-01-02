@@ -35,6 +35,7 @@ class HandleEnvironment():
         self.robot.home()
         self.IDs = {}
         self.hO.reset() # reset objects and goals
+        print("Environment resetted")
 
     def robotToStartPose(self):
         target_pose = Affine(translation=[0.25, -0.34, -0.1], rotation=[-np.pi, 0, np.pi/2])
@@ -281,7 +282,7 @@ class HandleObjects():
     def reset(self):
         self.goals = {}
         self.objects = {f'{part}_{colour}': {'poses': [], 'urdfPath': None} for part in parts for colour in colours}
-
+        print("Objects and goals resetted")
 
 class CalcReward():
     def __init__(self, handleEnv):
@@ -296,6 +297,7 @@ class CalcReward():
         self.prevDistRobToGoal, self.prevDistObjToGoal, self.prevDistRobToObj = None, None, None
         self.nearObjectID, self.prevNearObjectID = None, None
         self.positions = self.handleEnv.getPositions()
+        print("Reward calculator resetted")
 
     def calculateDistance(self, point1, point2):
         return np.linalg.norm(np.array(point1) - np.array(point2))
