@@ -1,9 +1,5 @@
 import gymnasium as gym
-
 import numpy as np
-from pybullet_utils.bullet_client import BulletClient
-from bullet_env.bullet_robot import BulletRobot
-from transform import Affine
 
 from handleEnvironment import HandleEnvironment, CalcReward
 
@@ -41,16 +37,14 @@ class sortingViaPushingEnv(gym.Env):
 	def step(self, action):
 		self.hdlEnv.performAction(action)
         # get deltaReward
-		self.totalReward = self.calcReward.calcReward()
-		info = {'Step': self.stepCount, 'Reward': {'total': self.totalReward, 'previous': self.prevReward}, 'action': action} # additional debug informations
-		self.reward = self.totalReward # - self.prevReward
-		self.prevReward = self.totalReward
+		self.reward = self.calcReward.calcReward()
+		info = {'Step': self.stepCount, 'Reward': self.reward, 'action': action} # additional debug informations
 		
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
-			truncated = True
+			self.truncated = True
 		else:
-			truncated = False
+			self.truncated = False
 		self.stepCount += 1
 		observation = self.hdlEnv.getStates()
 		return observation, self.reward, self.done, self.truncated, info
@@ -65,6 +59,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv.robotToStartPose()
 		self.hdlEnv.spawnGoals()
 		self.hdlEnv.spawnObjects()
+		self.calcReward.reset()
 		
         # create observation
 		observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)

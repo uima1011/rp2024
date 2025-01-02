@@ -1,6 +1,4 @@
-from stable_baselines3.common.env_checker import check_env
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
-
 
 env = svpEnv()
 

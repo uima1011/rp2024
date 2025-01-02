@@ -329,7 +329,6 @@ class PushingEnv(gym.Env):
                 else: # Abstand berechnen
                     dist = self.get_dist_robot_object(self.nearest_object_id)
                     return dist, self.nearest_object_id    
-                    return dist, self.nearest_object_id    
 
     def distances_for_reward(self):
         self.previous_nearest_object_id = self.nearest_object_id
