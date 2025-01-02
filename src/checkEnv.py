@@ -1,5 +1,7 @@
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
+from handleEnvironment import HandleObjects as HO
 
+ASSETS_PATH = "/home/group1/workspace/assets"
 env = svpEnv()
 
 # Test 1:
@@ -27,6 +29,10 @@ for episode in range(episodes):
     obs = env.reset()
     while True: #not done:
         # action = env.action_space.sample() # random actions
+        # state_obj_z = handle_objects_instance.get_state_obj_z()
+        # print(f"State object z: {state_obj_z}")
+
+        input("Press Enter to continue...")
         action = moveRobotKeyboard() # manual actions
         if action is not None:
             obs, reward, done, truncated, info = env.step(action)

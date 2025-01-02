@@ -130,9 +130,6 @@ class HandleEnvironment():
         )
         self.robot.lin(target_pose)
     
-    def objectOffTable(self):
-        '''checks objects positions z height and returns true if its under the table''' # TODO
-        return False
 
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
@@ -144,17 +141,27 @@ class HandleEnvironment():
             if robotY < tableY[1] and robotY > tableY[0]: # check y
                 leaved = False
         return False # TODO activate with returning leaved
-    
+
+    def objectOffTable(self):
+        for key , values in self.IDs.items():
+            for id in values:
+                pos,_ = self.bullet_client.getBasePositionAndOrientation(id)
+                z = pos[2]
+                if z < 0: 
+                    return True
+        return False
+
     def checkMisbehaviour(self):
         '''check behaviour of robot and objects and return true if something misbehaves'''
         misbehaviour = self.objectOffTable() | self.robotLeavedWorkArea()
         return misbehaviour
+    
 
 class HandleObjects():
     def __init__(self, assets_folder):
         self.tableCords = {
-                    'x':[0.3, 0.9], # min, max
-                    'y':[-0.29, 0.29]
+                    'x':[0.9, 1.9], # min, max
+                    'y':[0.29, 1.29]
                     }
         self.objectWidth = 0.05
         self.goalWidths = {
@@ -208,6 +215,7 @@ class HandleObjects():
                         self.objects[f'{part}_{col}']['urdfPath'] = urdfPath
                         if objectPose is not None:
                             self.objects[f'{part}_{col}']['poses'].append(objectPose)
+                            print(f"Object {part}_{col} spawned at {objectPose.translation}")
                             spawned_count += 1
                             break
                     else:
@@ -220,6 +228,11 @@ class HandleObjects():
         else:
             print("Some Objects failed to generate")
             return self.objects
+        
+    def get_state_obj_z(self):
+        object_z_positions = {}
+        print(f"Self.objects: {self.objects}")
+        return object_z_positions
 
     
     # Goals:
@@ -384,6 +397,9 @@ def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()
     hEnv.spawnObjects()
+
+    state_obj_z = hEnv.objectOffTable()
+    print(f"State object z: {state_obj_z}")
 
     hEnv.robotToStartPose()
     calcRew = CalcReward(hEnv)
