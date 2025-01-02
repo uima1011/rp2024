@@ -18,7 +18,7 @@ env = svpEnv()
 env.reset()
 
 model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logDir)
-
+# model = PPO.load("/home/group1/workspace/data/models/{MODEL}/XXXXX.zip", env=env, verbose=1, tensorboard_log=logDir) # use existing model
 
 iters = 0
 while True:
