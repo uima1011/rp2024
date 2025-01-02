@@ -7,19 +7,19 @@ env = svpEnv()
 check_env(env)
 
 # Test 2:
-# def moveRobotKeyboard():
-#     wasdInput = input("Move Robot with wasd")
-#     if wasdInput == 'w': # forwards
-#         translatedInput = 1
-#     elif wasdInput == 's': # backwards
-#         translatedInput = 0
-#     elif wasdInput == 'a': # left
-#         translatedInput = 2 
-#     elif wasdInput == 'd':
-#         translatedInput = 3
-#     else: # typing error
-#         return None
-#     return translatedInput
+def moveRobotKeyboard():
+    wasdInput = input("Move Robot with wasd")
+    if wasdInput == 'w': # forwards
+        translatedInput = 1
+    elif wasdInput == 's': # backwards
+        translatedInput = 0
+    elif wasdInput == 'a': # left
+        translatedInput = 2 
+    elif wasdInput == 'd':
+        translatedInput = 3
+    else: # typing error
+        return None
+    return translatedInput
 
 episodes = 50
 for episode in range(episodes):
