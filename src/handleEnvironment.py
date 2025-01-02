@@ -156,9 +156,10 @@ class HandleObjects():
                     'x':[0.3, 0.9], # min, max
                     'y':[-0.29, 0.29]
                     }
-        self.goal_width = {
-                            'x': 0.15 + 0.01, # min_size_object + offset
-                            'y': 0.15 + 0.01
+        self.objectWidth = 0.05
+        self.goalWidths = {
+                            'x': 3*self.objectWidth + 0.01, # numb*min_size_object + offset --> 9 objets fit in goal
+                            'y': 3*self.objectWidth + 0.01
                             }  
 
         self.goals = {}
@@ -251,8 +252,8 @@ class HandleObjects():
     def generateGoals(self, z_goal = -0.01, max_attempts=100):
         '''Generate two non-overlapping goal areas. Returns False if unable to generate non-overlapping areas after max_attempts.'''
         for _ in range(max_attempts):
-            goal1_coords = self.generate_single_goal_area(self.tableCords, self.goal_width) # generate goal area
-            goal2_coords = self.generate_single_goal_area(self.tableCords, self.goal_width) 
+            goal1_coords = self.generate_single_goal_area(self.tableCords, self.goalWidths) # generate goal area
+            goal2_coords = self.generate_single_goal_area(self.tableCords, self.goalWidths) 
             if not self.check_rectangle_overlap(goal1_coords, goal2_coords):
                 goal1_pose = self.generate_goal_pose(goal1_coords, z_goal) # generates pose for goal area center
                 goal2_pose = self.generate_goal_pose(goal2_coords, z_goal)
@@ -285,7 +286,7 @@ class CalcReward():
         return np.linalg.norm(np.array(point1) - np.array(point2))
 
     def checkObjectInsideGoal(self, objID):
-        distDefInsideGoal = 0.05
+        distDefInsideGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
         if self.getDistObjToGoal(objID) < distDefInsideGoal:
             return True
         else: # outside goal
