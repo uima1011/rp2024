@@ -37,7 +37,7 @@ class sortingViaPushingEnv(gym.Env):
 	def step(self, action):
 		self.hdlEnv.performAction(action)
         # get deltaReward
-		self.reward = self.calcReward.calcReward2()
+		self.reward = self.calcReward.calcReward()
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
