@@ -15,10 +15,10 @@ colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
 
-ROBOT_STATE_COUNT = 2 # x and y
+ROBOT_STATE_COUNT = 4 # x and y pos + vel
 MAX_OBJECT_COUNT = 4*len(colours)*len(parts) # max 4 of each object type and colour
 GOAL_COUNT = len(colours) # red and green
-OBJECT_STATE_COUNT = 3 # x, y and rotation arround z
+OBJECT_STATE_COUNT = 6 # x, y and rotation arround z (pos + vel)
 GOAL_STATE_COUNT = 3 # x, y and rotation arround z
 
 class sortingViaPushingEnv(gym.Env):

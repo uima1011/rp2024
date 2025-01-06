@@ -18,10 +18,17 @@ class HandleEnvironment():
     def __init__(self, render, assets_folder):
         self.urdfPathRobot = os.path.join(assets_folder, 'urdf', 'robot_without_gripper.urdf')
         self.urdfPathGoal = os.path.join(assets_folder, 'objects', 'goals')
+        # init objects
         self.hO = HandleObjects(assets_folder)
         self.IDs = {}
+
+        # robot and sim
         self.bullet_client = BulletClient(connection_mode=p.GUI)
         self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+        # Initialize previous states for velocity computation
+        self.previous_object_states = None
+        self.previous_robot_state = None
+        self.dt = self.bullet_client.getPhysicsEngineParameters()['fixedTimeStep'] # timestep in seconds
         if not render:
             self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
@@ -32,6 +39,9 @@ class HandleEnvironment():
         self.robot = BulletRobot(bullet_client=self.bullet_client, urdf_path=self.urdfPathRobot)
         self.robot.home()
         self.IDs = {}
+        # reset velocity
+        self.previous_object_states = None
+        self.previous_robot_state = None
         self.hO.reset() # reset objects and goals
         print("Environment resetted")
 
@@ -74,23 +84,65 @@ class HandleEnvironment():
     def getIDs(self):
         return self.IDs          
 
-    def getStates(self):
-        '''returns flattened list as observation for robot, objects and goals'''
+    def _getCoordinates(self):
+        '''Returns the relative coordinates of objects and goals with respect to the robot's end-effector.'''
         objectStates, goalStates = [], []
+
+        # Get robot position (end-effector pose)
+        robotState = self.robot.get_eef_pose().translation[:2]
+
         for key, ids in self.IDs.items():
             states = []
             for id in ids:
                 pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
                 zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                states.extend([pos[0], pos[1], zAngle])
+
+                # Compute relative position (object/goal position - robot position)
+                relative_pos = [pos[0] - robotState[0], pos[1] - robotState[1], zAngle] # TODO think if angle should aslo be relative
+                states.extend(relative_pos)
+
             if 'goal' in key:
                 goalStates.extend(states)
             else:
                 objectStates.extend(states)
-        robotState = self.robot.get_eef_pose().translation[:2]
-        paddedObjStates = np.pad(objectStates, (0, 3*MAX_OBJECT_COUNT-len(objectStates)), constant_values=0)
-        return np.concatenate([robotState, paddedObjStates, np.array(goalStates)])
 
+        # Pad object states to ensure consistent size
+        paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
+
+        # Store current states for velocity computation
+        self.previous_object_states = paddedObjStates
+        self.previous_robot_state = robotState
+
+        return robotState, paddedObjStates, goalStates
+
+    def getStates(self):
+        '''Combines positions and velocities into a single observation.'''
+        # Get current positions
+        robotState, paddedObjStates, goalStates = self._getCoordinates()
+
+        # Compute velocities based on current and previous positions
+        robotVelocity, paddedObjVelocities = self._getVelocities(robotState, paddedObjStates)
+
+        # Concatenate states and velocities for the final observation
+        return np.concatenate([robotState, robotVelocity, paddedObjStates, paddedObjVelocities, np.array(goalStates)])
+    
+    def _getVelocities(self, current_robot_state, current_object_states):
+        '''Computes the velocities of the robot and objects using finite differences.'''
+        # Ensure previous states are available
+        if self.previous_object_states is None or self.previous_robot_state is None:
+            zero_robot_velocity = np.zeros(2)
+            zero_object_velocity = np.zeros(3 * MAX_OBJECT_COUNT)
+            return zero_robot_velocity, zero_object_velocity
+
+        # Compute finite differences for velocities
+        robotVelocity = (np.array(current_robot_state) - np.array(self.previous_robot_state)) / self.dt
+        objectVelocities = (np.array(current_object_states) - np.array(self.previous_object_states)) / self.dt
+
+        # Pad object velocities to ensure consistent size
+        paddedObjVelocities = np.pad(objectVelocities, (0, 3 * MAX_OBJECT_COUNT - len(objectVelocities)), constant_values=0)
+
+        return robotVelocity, paddedObjVelocities
+    
     def getPositions(self):
         '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
         positionDict = {}
