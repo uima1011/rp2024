@@ -404,16 +404,24 @@ class CalcReward():
 
 
     def getDistObjToGoal(self, objID):
-        objName, objPos = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), None)
+        objName, objPos = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), (None, None))
+        if objName is None or objPos is None:
+            return float('inf')
         colour = objName.split('_')[1]
         _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
+        if goalPosDict is None:
+            return float('inf')
         goalPos, = goalPosDict.values()
         return self.calculateDistance(objPos[:2], goalPos[:2])
     
     def getDistRobToGoal(self, objID):
-        objName, _ = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), None)
+        objName, _ = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), (None, None))
+        if objName is None:
+            return float('inf')
         colour = objName.split('_')[1]
-        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions.items() if f'goal_{colour}' in self.positions), None)
+        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions.items() if f'goal_{colour}' in self.positions), (None, None))
+        if goalPos is None:
+            return float('inf')
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
 
     def calcReward(self):
