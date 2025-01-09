@@ -1,7 +1,7 @@
 from stable_baselines3 import PPO
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
-MODEL_PATH = 'data/models/PPO/90000.zip'
+MODEL_PATH = 'data/models/PPO/10000.zip'
 ENV = svpEnv()
 
 def test_model(model_path, env):

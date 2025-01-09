@@ -21,7 +21,7 @@ class HandleEnvironment():
         # init objects
         self.hO = HandleObjects(assets_folder)
         self.IDs = {}
-
+        self.nearestObjID = None
         # robot and sim
         self.bullet_client = BulletClient(connection_mode=p.GUI)
         self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
@@ -99,12 +99,15 @@ class HandleEnvironment():
 
                 # Compute relative position (object/goal position - robot position)
                 relative_pos = [pos[0] - robotState[0], pos[1] - robotState[1], zAngle] # TODO think if angle should aslo be relative
-                states.extend(relative_pos)
-
+                if id == self.nearestObjID or 'goal' in key: # TODO nearestObj
+                    states.extend(relative_pos)
+                else:
+                    states.extend(np.zeros(len(states)))
             if 'goal' in key:
                 goalStates.extend(states)
             else:
                 objectStates.extend(states)
+              
 
         # Pad object states to ensure consistent size
         paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
@@ -126,6 +129,19 @@ class HandleEnvironment():
         # Concatenate states and velocities for the final observation
         return np.concatenate([robotState, robotVelocity, paddedObjStates, paddedObjVelocities, np.array(goalStates)])
     
+    def getStatesOnlyNearestObject(self, nearestObjID):
+        self.nearestObjID = nearestObjID
+        '''Only returns robot state, nearest object rel and rel goals'''
+        # Get current positions
+        robotState, paddedObjStates, goalStates = self._getCoordinates()
+
+        # Compute velocities based on current and previous positions
+        robotVelocity, paddedObjVelocities = self._getVelocities(robotState, paddedObjStates)
+
+        # Concatenate states and velocities for the final observation
+        return np.concatenate([robotState, np.zeros(2), paddedObjStates, np.zeros(3 * MAX_OBJECT_COUNT), np.array(goalStates)])
+
+
     def _getVelocities(self, current_robot_state, current_object_states):
         '''Computes the velocities of the robot and objects using finite differences.'''
         # Ensure previous states are available
@@ -411,7 +427,7 @@ class CalcReward():
             self.prevDistObjToGoal = self.getDistObjToGoal(self.nearObjectID)
             self.prevDistRobToGoal = self.getDistRobToGoal(self.nearObjectID)
             reward = 15
-            return reward
+            return reward, self.nearObjectID # TODO test
         # distance of that object to its goal
         self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
         #distance of robot to goal for nearest object
@@ -438,7 +454,7 @@ class CalcReward():
         self.prevDistObjToGoal = self.distObjToGoal
         self.prevDistRobToGoal = self.distRobToGoal
 
-        return reward     
+        return (reward, self.nearObjectID) # TODO test     
     
     def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
         reward = 0
