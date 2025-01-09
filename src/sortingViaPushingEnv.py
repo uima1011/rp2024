@@ -37,7 +37,7 @@ class sortingViaPushingEnv(gym.Env):
 	def step(self, action):
 		self.hdlEnv.performAction(action)
         # get deltaReward
-		self.reward = self.calcReward.calcReward2()
+		self.reward, nearestObjID = self.calcReward.calcReward() # TODO test
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
@@ -46,7 +46,9 @@ class sortingViaPushingEnv(gym.Env):
 		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Done': self.done, 'Truncated': self.truncated}
 		print(info)
 		self.stepCount += 1
-		observation = self.hdlEnv.getStates()
+		observation = self.hdlEnv.getStatesOnlyNearestObject(nearestObjID) # TODO test
+		print(f'nearestObjID: {nearestObjID}')
+		print(observation)
 		return observation, self.reward, self.done, self.truncated, info
 	
 	def reset(self, seed=None):
@@ -59,10 +61,11 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv.robotToStartPose()
 		self.hdlEnv.spawnGoals()
 		self.hdlEnv.spawnObjects()
+		_, nearestObjID = self.calcReward.calcReward() # TODO test
 		self.calcReward.reset()
 		
         # create observation
-		observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
+		observation = self.hdlEnv.getStatesOnlyNearestObject(nearestObjID) # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ) TODO test
 		info = {}
 
 		print("SortingViaPushingEnv resetted")
