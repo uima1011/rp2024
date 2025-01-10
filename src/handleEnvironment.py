@@ -365,9 +365,9 @@ class CalcReward():
         #distance of robot to goal for nearest object
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
         #remeber distances for next step
-        reward = 0
+        reward = -1
         if (self.prevDistRobToObj - self.distRobToObj) > 0.005:
-            reward += 0.9
+            reward += 1.9
         elif (self.distRobToObj - self.prevDistRobToObj) > 0.005:
             reward -= 0.9
         if (self.prevDistObjToGoal - self.distObjToGoal) > 0.005:
@@ -375,9 +375,9 @@ class CalcReward():
         elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.005:
             reward -= 0
         if (self.prevDistRobToGoal - self.distRobToGoal) > 0.005:
-            reward -= 0.1
+            reward -= 0.5
         elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005:
-            reward += 0.1
+            reward += 0.5
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
 
@@ -386,8 +386,30 @@ class CalcReward():
         self.prevDistObjToGoal = self.distObjToGoal
         self.prevDistRobToGoal = self.distRobToGoal
 
-        return reward     
+        return reward
     
+    def getStatePositions(self):
+        '''Returns flattened list as observation for robot, nearest object, and its corresponding goal'''
+        robotState = self.positions['robot']
+        nearestObjectState = [0.0,0.0,0.0]
+        key1 = None
+        for key, positionsDict in self.positions.items():
+            if self.nearObjectID in positionsDict:
+                nearestObjectState = positionsDict[self.nearObjectID]
+                key1 = key
+                 
+        if key1 == None:
+            nearestGoalState = [0.0,0.0,0.0]
+        else:
+            colour = key1.split('_')[1]
+            _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
+            goalPos, = goalPosDict.values()
+            nearestGoalState = goalPos
+            print(nearestGoalState)
+
+        return np.concatenate([robotState, nearestObjectState, nearestGoalState])
+
+            
     def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
         reward = 0
         self.positions = self.handleEnv.getPositions()
