@@ -410,7 +410,25 @@ class CalcReward():
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
 
             
-            
+    def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
+        reward = 0
+        self.positions = self.handleEnv.getPositions()
+        self.prevNearObjectID = self.nearObjectID
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
+            self.prevDistRobToObj = self.distRobToObj
+            self.prevDistObjToGoal = self.distObjToGoal
+            self.prevDistRobToGoal = self.distRobToGoal
+            reward =+ 15 # award one more object in goal
+
+        rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
+        rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
+        rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
+    
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()
