@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 
 from handleEnvironment import HandleEnvironment, CalcReward
-
+from pprint import pprint
 # Setup Simulation
 RENDER = True
 ASSETS_PATH = "/home/group1/workspace/assets"
@@ -15,10 +15,10 @@ colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
 
-ROBOT_STATE_COUNT = 4 # x and y pos + vel
-MAX_OBJECT_COUNT = 4*len(colours)*len(parts) # max 4 of each object type and colour
+ROBOT_STATE_COUNT = 2 # x and y pos
+MAX_OBJECT_COUNT = 3*len(colours)*len(parts) # max 4 of each object type and colour
 GOAL_COUNT = len(colours) # red and green
-OBJECT_STATE_COUNT = 6 # x, y and rotation arround z (pos + vel)
+OBJECT_STATE_COUNT = 3 # x, y and rotation arround z pos
 GOAL_STATE_COUNT = 3 # x, y and rotation arround z
 
 class sortingViaPushingEnv(gym.Env):
@@ -36,37 +36,35 @@ class sortingViaPushingEnv(gym.Env):
 		
 	def step(self, action):
 		self.hdlEnv.performAction(action)
-        # get deltaReward
-		self.reward, nearestObjID = self.calcReward.calcReward() # TODO test
-		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
+		self.reward = self.calcReward.calcReward()
+		self.terminated = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
 		else:
 			self.truncated = False # TODO ist das nicht sowieso schon false?
-		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Done': self.done, 'Truncated': self.truncated}
-		print(info)
+		
+		
+
+		observation = self.hdlEnv.getStates()
+		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Observation': observation}
+		pprint(info)
 		self.stepCount += 1
-		observation = self.hdlEnv.getStatesOnlyNearestObject(nearestObjID) # TODO test
-		print(f'nearestObjID: {nearestObjID}')
-		print(observation)
-		return observation, self.reward, self.done, self.truncated, info
+		return observation, self.reward, self.terminated, self.truncated, info
 	
 	def reset(self, seed=None):
 		super().reset(seed=seed)
 		self.stepCount = 0
-		self.done = False
+		self.terminated = False
 		self.truncated  = False
-		self.prevReward = 0
+		self.reward = 0
 		self.hdlEnv.resetEnvironment()
 		self.hdlEnv.robotToStartPose()
 		self.hdlEnv.spawnGoals()
 		self.hdlEnv.spawnObjects()
-		_, nearestObjID = self.calcReward.calcReward() # TODO test
 		self.calcReward.reset()
 		
-        # create observation
-		observation = self.hdlEnv.getStatesOnlyNearestObject(nearestObjID) # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ) TODO test
-		info = {}
-
-		print("SortingViaPushingEnv resetted")
+		observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
+		
+		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': -1, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Oberservation': observation}
+		print("Environment resetted")
 		return observation, info
