@@ -12,7 +12,7 @@ import time
 colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
-MAX_OBJECT_COUNT = 4*len(colours)*len(parts)
+MAX_OBJECT_COUNT = 3*len(colours)*len(parts)
 
 class HandleEnvironment():
     def __init__(self, render, assets_folder):
@@ -98,11 +98,9 @@ class HandleEnvironment():
                 zAngle = R.from_quat(ori).as_euler('xyz')[2]
 
                 # Compute relative position (object/goal position - robot position)
-                relative_pos = [pos[0] - robotState[0], pos[1] - robotState[1], zAngle] # TODO think if angle should aslo be relative
-                if id == self.nearestObjID or 'goal' in key: # TODO nearestObj
-                    states.extend(relative_pos)
-                else:
-                    states.extend(np.zeros(len(states)))
+                relative_pos = [pos[0] - robotState[0], pos[1] - robotState[1], zAngle]
+                states.extend(relative_pos)
+
             if 'goal' in key:
                 goalStates.extend(states)
             else:
@@ -123,11 +121,8 @@ class HandleEnvironment():
         # Get current positions
         robotState, paddedObjStates, goalStates = self._getCoordinates()
 
-        # Compute velocities based on current and previous positions
-        robotVelocity, paddedObjVelocities = self._getVelocities(robotState, paddedObjStates)
-
         # Concatenate states and velocities for the final observation
-        return np.concatenate([robotState, robotVelocity, paddedObjStates, paddedObjVelocities, np.array(goalStates)])
+        return np.concatenate([robotState, paddedObjStates, np.array(goalStates)])
     
     def getStatesOnlyNearestObject(self, nearestObjID):
         self.nearestObjID = nearestObjID
@@ -278,7 +273,7 @@ class HandleObjects():
         for folder, part in zip(objectFolders, parts):
             for col in colours:
                 urdfPath = os.path.join(self.urdfPathObjects, folder, f'{part}_{col}.urdf')
-                objCount = np.random.randint(1, MAX_OBJECT_COUNT / len(colours) / len(parts))
+                objCount = np.random.randint(1, (MAX_OBJECT_COUNT / len(colours) / len(parts))+1)
                 spawned_count = 0
                 for _ in range(objCount):
                     for _ in range(max_attempts):
@@ -435,7 +430,7 @@ class CalcReward():
             self.prevDistObjToGoal = self.getDistObjToGoal(self.nearObjectID)
             self.prevDistRobToGoal = self.getDistRobToGoal(self.nearObjectID)
             reward = 15
-            return reward, self.nearObjectID # TODO test
+            return reward
         # distance of that object to its goal
         self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
         #distance of robot to goal for nearest object
@@ -462,7 +457,7 @@ class CalcReward():
         self.prevDistObjToGoal = self.distObjToGoal
         self.prevDistRobToGoal = self.distRobToGoal
 
-        return (reward, self.nearObjectID) # TODO test     
+        return reward     
     
     def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
         reward = 0
