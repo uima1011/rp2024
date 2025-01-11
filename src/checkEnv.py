@@ -1,10 +1,13 @@
+from pprint  import pprint
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 from stable_baselines3.common.env_checker import check_env
 env = svpEnv()
 
-test = 1 # change to TEST 2 or 1
+test = 2 # 1 = testEnv, 2 = manual test for x episodes
 
 def moveRobotKeyboard():
+    manualTermination = False
+    translatedInput = -1
     wasdInput = input("Move Robot with wasd")
     if wasdInput == 'w': # forwards
         translatedInput = 1
@@ -14,26 +17,30 @@ def moveRobotKeyboard():
         translatedInput = 2 
     elif wasdInput == 'd':
         translatedInput = 3
+    elif wasdInput == 't':
+        manualTermination = True
     else: # typing error
-        return None
-    return translatedInput
+        return None, False
+    return translatedInput, manualTermination
 
 def main():
-    if test == 1:
+    if test == 2:
         episodes = 50
         for episode in range(episodes):
-            done = False
+            terminated = False
             obs = env.reset()
             if episode >0: 
                 print(f"Error: Environment was resetted (presumably after misbehaviour of robot / objects). Episode: {episode}")
-            while done==False: #not done:
+            while terminated==False: #not terminated:
                 # action = env.action_space.sample() # random actions
                 # state_obj_z = handle_objects_instance.get_state_obj_z()
                 # print(f"State object z: {state_obj_z}")
                 # input("Press Enter to continue...")
-                action = moveRobotKeyboard() # manual actions
+                action, manTermination = moveRobotKeyboard() # manual actions
+                if manTermination:
+                    break
                 if action is not None:
-                    obs, reward, done, truncated, info = env.step(action)
+                    obs, reward, terminated, truncated, info = env.step(action)
     else:
         check_env(env) # test 2
 
