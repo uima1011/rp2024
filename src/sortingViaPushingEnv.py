@@ -31,7 +31,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.calcReward = CalcReward(self.hdlEnv)
 		self.stepCount = 0
 		self.episodeCount = 0
-		self.counter = 0 # for giving increassing step sizes before timeout
+		self.counter = 1 # for giving increassing step sizes before timeout
 		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
 		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
 		lowBounds, highBounds = self.hdlEnv.getBoundaries()
@@ -41,12 +41,12 @@ class sortingViaPushingEnv(gym.Env):
 	def step(self, action):
 		self.hdlEnv.performAction(action)
 
-		self.reward = self.calcReward.calcReward2()
+		self.reward = self.calcReward.calcReward3()
 
 		self.terminated = self.calcReward.taskFinished()
 
 		self.misbehaviour = self.hdlEnv.checkMisbehaviour() # Task ended unsuccessfully (object falls from table or robot away from table)
-		self.timeout = self.calcReward.taskTimeout(self.stepCount, self.episodeCount) # timeout because robot not fullfiling task
+		self.timeout, self.counter = self.calcReward.taskTimeout(self.stepCount, self.episodeCount, self.counter) # timeout because robot not fullfiling task
 		self.truncated = self.misbehaviour or self.timeout
 
 		observation = self.hdlEnv.getStates()
