@@ -1,6 +1,14 @@
 from stable_baselines3 import PPO
+from stable_baselines3.common.policies import ActorCriticPolicy
 import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
+from torch import nn
+
+class CustomMLPPolicy(ActorCriticPolicy):
+	def __init__(self, *args, **kwargs):
+		super(CustomMLPPolicy, self).__init__(*args, **kwargs,
+											  net_arch=[dict(pi=[256, 256], vf=[256, 256])],
+											  activation_fn= nn.ReLU,)
 
 TIMESTEPS = 10000
 MODEL = "PPO"
@@ -14,11 +22,12 @@ if not os.path.exists(logDir):
 
 env = svpEnv()
 
-# model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logDir)
-model = PPO.load(f"/home/group1/workspace/data/models/{MODEL}/10000.zip", env=env, verbose=1, tensorboard_log=logDir) # use existing model
+model = PPO(CustomMLPPolicy, env, verbose=1, tensorboard_log=logDir)
+# model = PPO.load(f"/home/group1/workspace/data/models/{MODEL}/10000.zip", env=env, verbose=1, tensorboard_log=logDir) # use existing model
 
 iters = 0
 while True:
 	iters += 1
 	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=MODEL)
 	model.save(f"{modelsDir}/{TIMESTEPS*iters}")
+	
