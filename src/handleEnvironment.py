@@ -210,8 +210,8 @@ class HandleEnvironment():
 
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
-        offX = 0.25 # offsets
-        offY = 0.1 
+        offX = 0.25 # offset
+        offY = 0.1
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
@@ -219,6 +219,9 @@ class HandleEnvironment():
         if robotX < tableX[1]+offX and robotX > tableX[0]-offX: # check x
             if robotY < tableY[1]+offY and robotY > tableY[0]-offY: # check y
                 leaved = False
+                
+        if leaved:
+            print(f"Robot leaved work area")
         return leaved
 
 
@@ -246,7 +249,7 @@ class HandleEnvironment():
 class HandleObjects():
     def __init__(self, assets_folder):
         self.tableCords = {
-                    'x':[0.5, 0.9], # min, max
+                    'x':[0.3, 0.9], # min, max
                     'y':[-0.29, 0.29]
                     }
         self.objectWidth = 0.05
@@ -506,21 +509,29 @@ class CalcReward():
         return reward + (200*rewardRobToObj + 100*rewardObjToGoal - 50*rewardRobToGoal) # base reward + euclidian rewards
     
     def calcReward3(self):
+        self.prevNearObjectID = self.nearObjectID
+        self.positions = self.handleEnv.getPositions() #update positions to get net coords
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
         self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
-        
+        if self.nearObjectID != self.prevNearObjectID: # new object --> reset treshhold so euclidian reward starts with 0, return reward based if first or last for that object
+            self.prevDistRobToObj = self.distRobToObj
+            self.prevDistObjToGoal = self.distObjToGoal
+            self.prevDistRobToGoal = self.distRobToGoal
+            if self.prevNearObjectID == None: # first step
+                reward = -0.5
+            else:
+                reward = 100
+            return reward
         distCloseToRobot = 0.05
-        distCloseToGoal = 0.5
+        distCloseToGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
         if self.distRobToObj > distCloseToRobot: # Task: move to object
             print("task move robot to object")
             reward = self.prevDistRobToObj - self.distRobToObj
         elif self.distObjToGoal > distCloseToGoal: # Task: push object into goal
             print("task push object into goal")
             reward = self.prevDistObjToGoal - self.distObjToGoal
-        else: # obj in goal
-            print("reward obj in goal")
-            reward = 100
+        return reward
 
 
 
@@ -542,7 +553,7 @@ class CalcReward():
             timeout = True
         else:
             timeout = False
-        return timeout
+        return timeout, counter
         # maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
         # maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
         # maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
