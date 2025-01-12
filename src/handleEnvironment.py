@@ -511,29 +511,42 @@ class CalcReward():
                         return False
         return True
 
-    def taskTimeout(self, steps):
+    def taskTimeout(self, steps, episode):
         '''check if current Task timeouts with increasing complexity and time'''
         '''
             Tasks:
-                move to object: 50 steps
-                push object into goal: 200 steps
+                move to object
+                push object into goal
         '''
         maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
         maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
         maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
         if self.distRobToGoal is None or self.distObjToGoal is None or self.distRobToObj is None:
             return False
-        if steps != 0 and steps%200 == 0 and self.distRobToGoal > maxDistRobToGoal: # go to goal
+        elif steps>=500 and self.distRobToGoal > maxDistRobToGoal: # go to goal
             print(f"Timeout: robot too far away from goal")
             timeout = True
-        if steps != 0 and steps%200 == 0 and self.distObjToGoal > maxDistObjToGoal:
+        elif steps>=500 and self.distObjToGoal > maxDistObjToGoal:
             print(f"Timeout: object too far away from goal")
             timeout = True
-        if steps != 0 and steps%50 == 0 and self.distRobToObj > maxDistRobToObj: # go to object
-            print(f"Timeout: robot too far away from nearest object")
-            timeout = True
+        if episode < 30:
+            if steps>=100 and self.distRobToObj > maxDistRobToObj: # go to object
+                print(f"Timeout: robot too far away from nearest object")
+                timeout = True
+            else:
+                timeout = False
+        elif episode < 10:
+            if steps>=50 and self.distRobToObj > maxDistRobToObj: # go to object
+                print(f"Timeout: robot too far away from nearest object")
+                timeout = True
+            else:
+                timeout = False
         else:
-            timeout = False
+            if steps>=400 and self.distRobToObj > maxDistRobToObj: # go to object
+                print(f"Timeout: robot too far away from nearest object")
+                timeout = True
+            else:
+                timeout = False
         return timeout
 
 def main():
