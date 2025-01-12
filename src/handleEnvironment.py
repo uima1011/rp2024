@@ -540,7 +540,7 @@ class CalcReward():
         
         if steps >= 50*counter:
             timeout = True
-        else
+        else:
             timeout = False
         return timeout
         # maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
