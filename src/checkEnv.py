@@ -33,11 +33,12 @@ def main():
         episodes = 50
         for episode in range(episodes):
             terminated = False
+            truncated = False
             obs = env.reset()
             if episode >0: 
                 print(f"Error: Environment was resetted (presumably after misbehaviour of robot / objects). Episode: {episode}")
             try:
-                while terminated==False: #not terminated:
+                while terminated is False and truncated is False: #not terminated:
                     # action = env.action_space.sample() # random actions
                     # state_obj_z = handle_objects_instance.get_state_obj_z()
                     # print(f"State object z: {state_obj_z}")
