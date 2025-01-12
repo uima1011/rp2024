@@ -9,10 +9,10 @@ import numpy as np
 import os
 import time
 
-colours = ['green', 'red']
-objectFolders = ['signs', 'cubes']
-parts = ['plus', 'cube']
-MAX_OBJECT_COUNT = 3*len(colours)*len(parts)
+colours = ['green'] # ['green', 'red']
+objectFolders = ['cubes'] # ['signs', 'cubes']
+parts = ['cube'] # ['plus', 'cube']
+MAX_OBJECT_COUNT = 2*len(colours)*len(parts)
 
 class HandleEnvironment():
     def __init__(self, render, assets_folder):
@@ -33,6 +33,22 @@ class HandleEnvironment():
             self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
         self.robot = BulletRobot(bullet_client=self.bullet_client, urdf_path=self.urdfPathRobot)
+
+    def getBoundaries(self):
+        '''Returns the boundaries of the observation space.'''
+        maxXRange = self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0] + 0.1 # because relativ pos and offset because robot spawns behind table
+        maxYRange = self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0] + 0.1
+
+        robotLow = np.array([-maxXRange, -maxYRange])
+        robotHigh = np.array([maxXRange, maxYRange])
+        objectLow = np.tile([-maxXRange, -maxYRange, -2*np.pi], MAX_OBJECT_COUNT)
+        objectHigh = np.tile([maxXRange, maxYRange, 2*np.pi], MAX_OBJECT_COUNT)
+        goalLow = np.tile([-maxXRange, -maxYRange, -2*np.pi], len(colours))
+        goalHigh = np.tile([maxXRange, maxYRange, 2*np.pi], len(colours))
+
+        lowBounds = np.concatenate([robotLow, objectLow, goalLow])
+        highBounds = np.concatenate([robotHigh, objectHigh, goalHigh])
+        return lowBounds, highBounds
 
     def resetEnvironment(self):
         self.bullet_client.resetSimulation()
@@ -190,19 +206,20 @@ class HandleEnvironment():
             translation=[new_x, new_y, -0.1],  # Keep z the same
             rotation=fixed_orientation  # Set the fixed orientation
         )
-        self.robot.lin(target_pose)
-    
+        self.robot.lin(target_pose)   
 
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
+        off = 0.1 # offset
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
         leaved = True
-        if robotX < tableX[1] and robotX > tableX[0]: # check x
-            if robotY < tableY[1] and robotY > tableY[0]: # check y
+        if robotX < tableX[1]+off and robotX > tableX[0]-off: # check x
+            if robotY < tableY[1]+off and robotY > tableY[0]-off: # check y
                 leaved = False
-        return False # TODO activate with returning leaved
+        return leaved
+
 
     def objectOffTable(self):
         for key , values in self.IDs.items():
@@ -222,7 +239,9 @@ class HandleEnvironment():
             print(f"Misbehaviour: {misbehaviour}")
         return misbehaviour
     
-
+    def close(self):
+        p.disconnect()
+        
 class HandleObjects():
     def __init__(self, assets_folder):
         self.tableCords = {
@@ -466,18 +485,57 @@ class CalcReward():
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
         self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
-        if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
+        if self.nearObjectID != self.prevNearObjectID: # new object --> reset treshhold so euclidian reward starts with 0
             self.prevDistRobToObj = self.distRobToObj
             self.prevDistObjToGoal = self.distObjToGoal
             self.prevDistRobToGoal = self.distRobToGoal
             reward =+ 15 # award one more object in goal
+        if self.nearObjectID is not None: # valid previous distances
+            rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
+            rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
+            rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
+        else: # objekt spawned in goal
+            rewardRobToObj = 5 # equals same award as if object spawned in goal
+            rewardObjToGoal = 0
+            rewardRobToGoal = 0
 
-        rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
-        rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
-        rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
         return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
     
+    def taskFinished(self):
+        '''checks if all objects are inside their goal zones --> returns true otherwhise false'''
+        for key, values in self.handleEnv.IDs.items():
+            if 'goal' not in key and 'robot' not in key:
+                for id in values:
+                    if not self.checkObjectInsideGoal(id):
+                        return False
+        return True
+
+    def taskTimeout(self, steps):
+        '''check if current Task timeouts with increasing complexity and time'''
+        '''
+            Tasks:
+                move to object: 50 steps
+                push object into goal: 200 steps
+        '''
+        maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
+        maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
+        maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
+        if self.distRobToGoal is None or self.distObjToGoal is None or self.distRobToObj is None:
+            return False
+        if steps != 0 and steps%200 == 0 and self.distRobToGoal > maxDistRobToGoal: # go to goal
+            print(f"Timeout: robot too far away from goal")
+            timeout = True
+        if steps != 0 and steps%200 == 0 and self.distObjToGoal > maxDistObjToGoal:
+            print(f"Timeout: object too far away from goal")
+            timeout = True
+        if steps != 0 and steps%50 == 0 and self.distRobToObj > maxDistRobToObj: # go to object
+            print(f"Timeout: robot too far away from nearest object")
+            timeout = True
+        else:
+            timeout = False
+        return timeout
+
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()
