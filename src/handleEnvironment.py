@@ -210,13 +210,14 @@ class HandleEnvironment():
 
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
-        off = 0.1 # offset
+        offX = 0.25 # offsets
+        offY = 0.1 
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
         leaved = True
-        if robotX < tableX[1]+off and robotX > tableX[0]-off: # check x
-            if robotY < tableY[1]+off and robotY > tableY[0]-off: # check y
+        if robotX < tableX[1]+offX and robotX > tableX[0]-offX: # check x
+            if robotY < tableY[1]+offY and robotY > tableY[0]-offY: # check y
                 leaved = False
         return leaved
 
@@ -245,7 +246,7 @@ class HandleEnvironment():
 class HandleObjects():
     def __init__(self, assets_folder):
         self.tableCords = {
-                    'x':[0.3, 0.9], # min, max
+                    'x':[0.5, 0.9], # min, max
                     'y':[-0.29, 0.29]
                     }
         self.objectWidth = 0.05
@@ -479,7 +480,7 @@ class CalcReward():
         return reward     
     
     def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
-        reward = 0
+        reward = -0.5
         self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
@@ -498,10 +499,31 @@ class CalcReward():
             rewardRobToObj = 5 # equals same award as if object spawned in goal
             rewardObjToGoal = 0
             rewardRobToGoal = 0
-
+        self.prevDistRobToObj = self.distRobToObj
+        self.prevDistObjToGoal = self.distObjToGoal
+        self.prevDistRobToGoal = self.distRobToGoal
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
-        return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
+        return reward + (200*rewardRobToObj + 100*rewardObjToGoal - 50*rewardRobToGoal) # base reward + euclidian rewards
     
+    def calcReward3(self):
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        
+        distCloseToRobot = 0.05
+        distCloseToGoal = 0.5
+        if self.distRobToObj > distCloseToRobot: # Task: move to object
+            print("task move robot to object")
+            reward = self.prevDistRobToObj - self.distRobToObj
+        elif self.distObjToGoal > distCloseToGoal: # Task: push object into goal
+            print("task push object into goal")
+            reward = self.prevDistObjToGoal - self.distObjToGoal
+        else: # obj in goal
+            print("reward obj in goal")
+            reward = 100
+
+
+
     def taskFinished(self):
         '''checks if all objects are inside their goal zones --> returns true otherwhise false'''
         for key, values in self.handleEnv.IDs.items():
@@ -511,43 +533,51 @@ class CalcReward():
                         return False
         return True
 
-    def taskTimeout(self, steps, episode):
+    def taskTimeout(self, steps, episode, counter):
         '''check if current Task timeouts with increasing complexity and time'''
-        '''
-            Tasks:
-                move to object
-                push object into goal
-        '''
-        maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
-        maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
-        maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
-        if self.distRobToGoal is None or self.distObjToGoal is None or self.distRobToObj is None:
-            return False
-        elif steps>=500 and self.distRobToGoal > maxDistRobToGoal: # go to goal
-            print(f"Timeout: robot too far away from goal")
+        if episode%50==0:
+            counter += 1
+        
+        if steps >= 50*counter:
             timeout = True
-        elif steps>=500 and self.distObjToGoal > maxDistObjToGoal:
-            print(f"Timeout: object too far away from goal")
-            timeout = True
-        if episode < 30:
-            if steps>=100 and self.distRobToObj > maxDistRobToObj: # go to object
-                print(f"Timeout: robot too far away from nearest object")
-                timeout = True
-            else:
-                timeout = False
-        elif episode < 10:
-            if steps>=50 and self.distRobToObj > maxDistRobToObj: # go to object
-                print(f"Timeout: robot too far away from nearest object")
-                timeout = True
-            else:
-                timeout = False
-        else:
-            if steps>=400 and self.distRobToObj > maxDistRobToObj: # go to object
-                print(f"Timeout: robot too far away from nearest object")
-                timeout = True
-            else:
-                timeout = False
+        else
+            timeout = False
         return timeout
+        # maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
+        # maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
+        # maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
+        # if self.distRobToGoal is None or self.distObjToGoal is None or self.distRobToObj is None:
+        #     return False
+        # elif steps>=500 and self.distRobToGoal > maxDistRobToGoal: # go to goal
+        #     print(f"Timeout: robot too far away from goal")
+        #     timeout = True
+        # elif steps>=500 and self.distObjToGoal > maxDistObjToGoal:
+        #     print(f"Timeout: object too far away from goal")
+        #     timeout = True
+        # if episode < 30:
+        #     if steps>=100 and self.distRobToObj > maxDistRobToObj: # go to object
+        #         print(f"Timeout: robot too far away from nearest object")
+        #         timeout = True
+        #     else:
+        #         timeout = False
+        # elif episode < 10:
+        #     if steps>=50 and self.distRobToObj > maxDistRobToObj: # go to object
+        #         print(f"Timeout: robot too far away from nearest object")
+        #         timeout = True
+        #     else:
+        #         timeout = False
+        # else:
+        #     if steps>=400 and self.distRobToObj > maxDistRobToObj: # go to object
+        #         print(f"Timeout: robot too far away from nearest object")
+        #         timeout = True
+        #     else:
+        #         timeout = False
+        # if steps>=70 and self.distRobToObj > maxDistRobToObj: # go to object
+        #     print(f"Timeout: robot too far away from nearest object")
+        #     timeout = True
+        # else:
+        #     timeout = False
+        # return timeout, counter
 
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
