@@ -31,6 +31,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.calcReward = CalcReward(self.hdlEnv)
 		self.stepCount = 0
 		self.episodeCount = 0
+		self.counter = 0 # for giving increassing step sizes before timeout
 		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
 		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
 		lowBounds, highBounds = self.hdlEnv.getBoundaries()
