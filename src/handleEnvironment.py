@@ -523,6 +523,8 @@ class CalcReward():
             else:
                 reward = 100
             return reward
+        if self.distRobToObj is None:
+            return -0.5 # obj in goal at first step? TODO check
         distCloseToRobot = 0.05
         distCloseToGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
         if self.distRobToObj > distCloseToRobot: # Task: move to object
