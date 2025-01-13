@@ -42,7 +42,7 @@ class sortingViaPushingEnv(gym.Env):
 	def step(self, action):
 		self.hdlEnv.performAction(action)
 
-		self.reward = self.calcReward.calcReward3()
+		self.reward = self.calcReward.calcReward4()
 
 		self.terminated = self.calcReward.taskFinished()
 
