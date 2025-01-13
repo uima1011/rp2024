@@ -29,7 +29,15 @@ def moveRobotKeyboard():
     return translatedInput, manualTermination
 
 def main():
-    if test == 2:
+    if test == 3:
+        _ = env.reset()
+        while(True):
+            action = env.action_space.sample()
+            _, _, terminated, truncated, info = env.step(action)
+            pprint(info)
+            if terminated or truncated:
+                _ = env.reset()
+    elif test == 2:
         episodes = 50
         for episode in range(episodes):
             terminated = False
