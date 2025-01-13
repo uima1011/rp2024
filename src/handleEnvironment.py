@@ -172,13 +172,20 @@ class HandleEnvironment():
     
     def getPositions(self):
         '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
-        positionDict = {}
+        positionDict = {'goals': {}, 'objects': {}, 'robot': []}
         for key, ids in self.IDs.items():
-            positionDict[key] = {}
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-                zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                positionDict[key][id] = [pos[0], pos[1], zAngle]
+            if 'goal' in key:
+                positionDict['goals'][key] = {}
+                for id in ids:
+                    pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
+                    positionDict['goals'][key][id] = [pos[0], pos[1], zAngle]
+            else:
+                positionDict['objects'][key] = {}
+                for id in ids:
+                    pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
+                    positionDict['objects'][key][id] = [pos[0], pos[1], zAngle]
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
 
@@ -377,10 +384,11 @@ class CalcReward():
         self.positions = self.handleEnv.getPositions()
 
     def reset(self):
-        self.distRobToGoal, self.distObjToGoal, self.distRobToObj  = None, None, None
-        self.prevDistRobToGoal, self.prevDistObjToGoal, self.prevDistRobToObj = None, None, None
-        self.nearObjectID, self.prevNearObjectID = None, None
         self.positions = self.handleEnv.getPositions()
+        self.distRobToGoal, self.distObjToGoal, self.distRobToObj, self.nearObjectID  = None, None, None, None
+        self.prevDistRobToObj, self.prevNearObjectID = self.getNearestObjToRob()
+        self.prevDistObjToGoal, self.prevDistRobToGoal =  self.getDistObjToGoal(self.prevNearObjectID), self.getDistRobToGoal(self.prevNearObjectID)
+
         print("Reward calculator resetted")
 
     def calculateDistance(self, point1, point2):
@@ -391,53 +399,55 @@ class CalcReward():
         if self.getDistObjToGoal(objID) < distDefInsideGoal:
             return True
         else: # outside goal
-            return False
-        
+            return False 
+
     def getNearestObjToRob(self):
-        while(True):
-            if self.nearObjectID is None: # first or last step
-                minDistance = float('inf')
-                for key, positionsDict in self.positions.items():
-                    if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
-                        # Check each position for an object (in case of multiple positions like 'plus_red')
-                        for id, obj_position in positionsDict.items():
-                            distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                            if distance < minDistance: # new minDistance and objekt outside of goal
-                                if not self.checkObjectInsideGoal(id):
-                                    minDistance = distance
-                                    self.nearObjectID = id
-                if self.nearObjectID is None:
-                    return None, None        
-                return minDistance, self.nearObjectID
-            else:
-                if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
-                        self.nearObjectID = None
-                        dist = None
-                else:  # Abstand berechnen
-                    for key, positionsDict in self.positions.items():
-                        if self.nearObjectID in positionsDict:
-                            dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
-                            break
-                    return dist, self.nearObjectID    
+        # Case 1: If there's no selected nearest object or the current object reached the goal
+        if self.nearObjectID is None or self.checkObjectInsideGoal(self.nearObjectID):
+            minDistance = float('inf')
+            self.nearObjectID = None  # Reset nearest object ID
+            
+            # Iterate over all objects to find the nearest one
+            for objPosDict in self.positions['objects'].values():
+                for objID, objPosition in objPosDict.items():
+                    distance = self.calculateDistance(self.positions['robot'], objPosition[:2])
+                    if distance < minDistance and not self.checkObjectInsideGoal(objID):
+                        minDistance = distance
+                        self.nearObjectID = objID
+            
+            # If no valid object found, return None
+            if self.nearObjectID is None:
+                return None, None
+            return minDistance, self.nearObjectID
+        
+        # Case 2: If the nearest object is already selected and valid
+        for objDict in self.positions['objects'].values():
+            if self.nearObjectID in objDict:
+                obj_position = objDict[self.nearObjectID]
+                dist = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                return dist, self.nearObjectID
+        
+        # Handle unexpected cases where the object ID is missing
+        self.nearObjectID = None
+        return None, None
 
 
     def getDistObjToGoal(self, objID):
-        objName, objPos = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), (None, None))
+        objName, objPos = next(((obj, pos[objID]) for (obj, pos) in self.positions['objects'].items() if objID in self.positions['objects'][obj]), (None, None))
         if objName is None or objPos is None:
             return float('inf')
         colour = objName.split('_')[1]
-        _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
-        if goalPosDict is None:
+        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions['goals'].items() if f'goal_{colour}' in obj), (None, None))
+        if goalPos is None:
             return float('inf')
-        goalPos, = goalPosDict.values()
         return self.calculateDistance(objPos[:2], goalPos[:2])
     
     def getDistRobToGoal(self, objID):
-        objName, _ = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), (None, None))
+        objName, _ = next(((obj, pos[objID]) for (obj, pos) in self.positions['objects'].items() if objID in self.positions['objects'][obj]), (None, None))
         if objName is None:
             return float('inf')
         colour = objName.split('_')[1]
-        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions.items() if f'goal_{colour}' in self.positions), (None, None))
+        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions['goals'].items() if f'goal_{colour}' in self.positions['goals']), (None, None))
         if goalPos is None:
             return float('inf')
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
@@ -473,7 +483,7 @@ class CalcReward():
         elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005:
             reward += 0.1
 
-        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions['objects'].items() if self.nearObjectID in self.positions['objects'][obj]), None))
 
         
         self.prevDistRobToObj = self.distRobToObj
@@ -505,7 +515,7 @@ class CalcReward():
         self.prevDistRobToObj = self.distRobToObj
         self.prevDistObjToGoal = self.distObjToGoal
         self.prevDistRobToGoal = self.distRobToGoal
-        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions['objects'].items() if self.nearObjectID in self.positions['objects'][obj]), None))
         return reward + (200*rewardRobToObj + 100*rewardObjToGoal - 50*rewardRobToGoal) # base reward + euclidian rewards
     
     def calcReward3(self):
@@ -535,7 +545,34 @@ class CalcReward():
             reward = self.prevDistObjToGoal - self.distObjToGoal
         return reward
 
-
+    def calcReward4(self):
+        self.positions = self.handleEnv.getPositions()
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        if self.prevNearObjectID is None and self.nearObjectID is None: # object spawned in goal
+            reward = 0
+            return reward
+        if self.prevNearObjectID != self.nearObjectID and self.prevNearObjectID is not None: 
+            reward = 100
+            self.prevNearObjectID = self.nearObjectID
+            return reward
+        distCloseToRobot = 0.05
+        distCloseToGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
+        if self.distRobToObj > distCloseToRobot: # Task: move to object
+            print("task move robot to object")
+            reward = self.prevDistRobToObj - self.distRobToObj
+        elif self.distObjToGoal > distCloseToGoal: # Task: push object into goal
+            print("task push object into goal")
+            reward = self.prevDistObjToGoal - self.distObjToGoal
+        else:
+            print("Error, shouldnt come here")
+            reward = 0
+        self.prevNearObjectID = self.nearObjectID
+        self.prevDistRobToObj = self.distRobToObj
+        self.prevDistObjToGoal = self.distObjToGoal
+        self.prevDistRobToGoal = self.distRobToGoal
+        return reward
 
     def taskFinished(self):
         '''checks if all objects are inside their goal zones --> returns true otherwhise false'''
@@ -548,51 +585,17 @@ class CalcReward():
 
     def taskTimeout(self, steps, episode, prevEpisode, counter):
         '''check if current Task timeouts with increasing complexity and time'''
+        maxSteps = 750
         if episode%50==0 and episode != prevEpisode:
             prevEpisode = episode
             counter += 1
         
-        if steps >= 50*counter:
+        if steps >= 50+10*counter or steps >= maxSteps:
             timeout = True
         else:
             timeout = False
         return timeout, counter, prevEpisode
-        # maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
-        # maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
-        # maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
-        # if self.distRobToGoal is None or self.distObjToGoal is None or self.distRobToObj is None:
-        #     return False
-        # elif steps>=500 and self.distRobToGoal > maxDistRobToGoal: # go to goal
-        #     print(f"Timeout: robot too far away from goal")
-        #     timeout = True
-        # elif steps>=500 and self.distObjToGoal > maxDistObjToGoal:
-        #     print(f"Timeout: object too far away from goal")
-        #     timeout = True
-        # if episode < 30:
-        #     if steps>=100 and self.distRobToObj > maxDistRobToObj: # go to object
-        #         print(f"Timeout: robot too far away from nearest object")
-        #         timeout = True
-        #     else:
-        #         timeout = False
-        # elif episode < 10:
-        #     if steps>=50 and self.distRobToObj > maxDistRobToObj: # go to object
-        #         print(f"Timeout: robot too far away from nearest object")
-        #         timeout = True
-        #     else:
-        #         timeout = False
-        # else:
-        #     if steps>=400 and self.distRobToObj > maxDistRobToObj: # go to object
-        #         print(f"Timeout: robot too far away from nearest object")
-        #         timeout = True
-        #     else:
-        #         timeout = False
-        # if steps>=70 and self.distRobToObj > maxDistRobToObj: # go to object
-        #     print(f"Timeout: robot too far away from nearest object")
-        #     timeout = True
-        # else:
-        #     timeout = False
-        # return timeout, counter
-
+        
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()
