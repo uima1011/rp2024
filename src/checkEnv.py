@@ -5,7 +5,7 @@ import sys
 
 
 
-test = 1 # 1 = testEnv, 2 = manual test for x episodes
+test = 2 # 1 = testEnv, 2 = controll robot with keyboard, 3 = random Actions in a loop
 
 env = svpEnv()
 
