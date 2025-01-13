@@ -31,6 +31,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.calcReward = CalcReward(self.hdlEnv)
 		self.stepCount = 0
 		self.episodeCount = 0
+		self.prevEpisodeCount = -1
 		self.counter = 1 # for giving increassing step sizes before timeout
 		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
 		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
@@ -46,11 +47,11 @@ class sortingViaPushingEnv(gym.Env):
 		self.terminated = self.calcReward.taskFinished()
 
 		self.misbehaviour = self.hdlEnv.checkMisbehaviour() # Task ended unsuccessfully (object falls from table or robot away from table)
-		self.timeout, self.counter = self.calcReward.taskTimeout(self.stepCount, self.episodeCount, self.counter) # timeout because robot not fullfiling task
+		self.timeout, self.counter, self.prevEpisodeCount = self.calcReward.taskTimeout(self.stepCount, self.episodeCount, self.prevEpisodeCount, self.counter) # timeout because robot not fullfiling task
 		self.truncated = self.misbehaviour or self.timeout
 
 		observation = self.hdlEnv.getStates()
-		info = {'Episode': self.episodeCount, 'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Observation': observation}
+		info = {'Episode': self.episodeCount, 'Step': self.stepCount, 'Counter': self.counter, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Observation': observation}
 		pprint(info)
 		self.stepCount += 1
 		if self.misbehaviour:
@@ -73,7 +74,7 @@ class sortingViaPushingEnv(gym.Env):
 		
 		observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
 		
-		info = {'Episode': self.episodeCount, 'Step': self.stepCount, 'Reward': self.reward, 'Action': -1, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Oberservation': observation}
+		info = {'Episode': self.episodeCount, 'Step': self.stepCount, 'Counter': self.counter, 'Reward': self.reward, 'Action': -1, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Oberservation': observation}
 		print("Environment resetted")
 		return observation, info
 	

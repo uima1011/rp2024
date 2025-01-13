@@ -544,16 +544,17 @@ class CalcReward():
                         return False
         return True
 
-    def taskTimeout(self, steps, episode, counter):
+    def taskTimeout(self, steps, episode, prevEpisode, counter):
         '''check if current Task timeouts with increasing complexity and time'''
-        if episode%50==0:
+        if episode%50==0 and episode != prevEpisode:
+            prevEpisode = episode
             counter += 1
         
         if steps >= 50*counter:
             timeout = True
         else:
             timeout = False
-        return timeout, counter
+        return timeout, counter, prevEpisode
         # maxDistRobToGoal = 3*0.05 + 0.02 # half goal width + offset
         # maxDistObjToGoal = 3*0.05 + 0.01 # half goal width + offset
         # maxDistRobToObj = 0.05/2 + 0.01 # half object width + offset
