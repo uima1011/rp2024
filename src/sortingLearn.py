@@ -43,7 +43,7 @@ import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
 TIMESTEPS = 10000
-MODEL = "DQN_simple_states_duration_reward_2"
+MODEL = "DQN_normiert"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
@@ -55,7 +55,7 @@ if not os.path.exists(logDir):
 # Umgebung initialisieren
 env = svpEnv()
 
-model = DQN.load(f"/home/group1/workspace/data/models/DQN_simple_states_duration_reward/100000.zip",
+model = DQN('MlpPolicy',
     env, 
     gamma=0.99, 
     learning_rate=1e-4,  # Stabileres Lernen

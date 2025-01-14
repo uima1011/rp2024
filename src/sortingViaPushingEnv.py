@@ -8,7 +8,7 @@ RENDER = True
 ASSETS_PATH = "/home/group1/workspace/assets"
 
 # Train:
-MAX_STEPS = 1000
+MAX_STEPS = 250
 
 # Environment
 colours = ['green', 'red']
@@ -27,6 +27,7 @@ class sortingViaPushingEnv(gym.Env):
 	def __init__(self):
 		super(sortingViaPushingEnv, self).__init__()
 		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
+		#state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
 		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * 1 + GOAL_STATE_COUNT * 1 # robot + max objects + goal states
 		self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf,
 											shape=(state_dim,), dtype=np.float64)
@@ -36,9 +37,11 @@ class sortingViaPushingEnv(gym.Env):
 		
 	def step(self, action):
 		self.hdlEnv.performAction(action)
-        # get deltaReward
-		self.reward = self.calcReward.calcReward()
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
+		if self.done:
+			self.reward = -100
+		else:
+			self.reward = self.calcReward.calcReward()
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
 		else:
@@ -48,6 +51,8 @@ class sortingViaPushingEnv(gym.Env):
 		self.stepCount += 1
 		#observation = self.hdlEnv.getStates()
 		observation = self.calcReward.getStatePositions()
+		print(observation)
+
 		return observation, self.reward, self.done, self.truncated, info
 	
 	def reset(self, seed=None):
