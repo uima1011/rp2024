@@ -353,6 +353,9 @@ class CalcReward():
         self.prevNearObjectID = self.nearObjectID
         # dictance robot to nearest object 
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        if self.handleEnv.objectOffTable():
+            reward = -50
+            return reward
         if (self.nearObjectID != self.prevNearObjectID):
             # set previous distance to new nearest obj
             self.prevDistRobToObj = self.distRobToObj
