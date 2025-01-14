@@ -366,18 +366,18 @@ class CalcReward():
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
         #remeber distances for next step
         reward = -1
-        if (self.prevDistRobToObj - self.distRobToObj) > 0.005:
+        if (self.prevDistRobToObj - self.distRobToObj) > 0.00001:
             reward += 1.9
-        elif (self.distRobToObj - self.prevDistRobToObj) > 0.005:
-            reward -= 0.9
-        if (self.prevDistObjToGoal - self.distObjToGoal) > 0.005:
-            reward += 5
-        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.005:
-            reward -= 0
-        if (self.prevDistRobToGoal - self.distRobToGoal) > 0.005:
-            reward -= 0.5
-        elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005:
-            reward += 0.5
+        elif (self.distRobToObj - self.prevDistRobToObj) > 0.00001:
+            reward -= 3.9
+        if (self.prevDistObjToGoal - self.distObjToGoal) > 0.00001:
+            reward += 10
+        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.00001:
+            reward -= 5
+        if (self.prevDistRobToGoal - self.distRobToGoal) > 0.00001:
+            reward -= 1
+        elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.00001:
+            reward += 1
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
 
@@ -405,7 +405,6 @@ class CalcReward():
             _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
             goalPos, = goalPosDict.values()
             nearestGoalState = goalPos
-            print(nearestGoalState)
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
 
