@@ -74,22 +74,33 @@ class HandleEnvironment():
     def getIDs(self):
         return self.IDs          
 
+    def normalize(self, value, min_val, max_val):
+        """Normalize a value to the range [-1, 1] with respect to the midpoint."""
+        midpoint = (min_val + max_val) / 2
+        return (value - midpoint) / (max_val - midpoint)
+
     def getStates(self):
-        '''returns flattened list as observation for robot, objects and goals'''
+        '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
         objectStates, goalStates = [], []
         for key, ids in self.IDs.items():
             states = []
             for id in ids:
                 pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
                 zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                states.extend([pos[0], pos[1], zAngle])
+                # Normalize x and y positions
+                norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                states.extend([norm_x, norm_y, zAngle])
             if 'goal' in key:
                 goalStates.extend(states)
             else:
                 objectStates.extend(states)
-        robotState = self.robot.get_eef_pose().translation[:2]
-        paddedObjStates = np.pad(objectStates, (0, 3*MAX_OBJECT_COUNT-len(objectStates)), constant_values=0)
-        return np.concatenate([robotState, paddedObjStates, np.array(goalStates)])
+        robotPose = self.robot.get_eef_pose().translation[:2]
+        # Normalize robot pose
+        norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+        norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+        paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
+        return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
 
     def getPositions(self):
         '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
@@ -392,24 +403,37 @@ class CalcReward():
         return reward
     
     def getStatePositions(self):
-        '''Returns flattened list as observation for robot, nearest object, and its corresponding goal'''
+        '''Returns normalized, flattened list as observation for robot, nearest object, and its corresponding goal'''
         robotState = self.positions['robot']
-        nearestObjectState = [0.0,0.0,0.0]
+        nearestObjectState = [0.0, 0.0, 0.0]
+        nearestGoalState = [0.0, 0.0, 0.0]
         key1 = None
+
+        # Normalize robot position
+        norm_robot_x = self.handleEnv.normalize(robotState[0], self.handleEnv.hO.tableCords['x'][0], self.handleEnv.hO.tableCords['x'][1])
+        norm_robot_y = self.handleEnv.normalize(robotState[1], self.handleEnv.hO.tableCords['y'][0], self.handleEnv.hO.tableCords['y'][1])
+        robotState = [norm_robot_x, norm_robot_y]
+
+        # Find nearest object and normalize its position
         for key, positionsDict in self.positions.items():
             if self.nearObjectID in positionsDict:
                 nearestObjectState = positionsDict[self.nearObjectID]
                 key1 = key
-                 
-        if key1 == None:
-            nearestGoalState = [0.0,0.0,0.0]
-        else:
+
+        if key1:
+            nearestObjectState[0] = self.handleEnv.normalize(nearestObjectState[0], self.handleEnv.hO.tableCords['x'][0], self.handleEnv.hO.tableCords['x'][1])
+            nearestObjectState[1] = self.handleEnv.normalize(nearestObjectState[1], self.handleEnv.hO.tableCords['y'][0], self.handleEnv.hO.tableCords['y'][1])
+        
+            # Find the goal corresponding to the object's color and normalize its position
             colour = key1.split('_')[1]
             _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
-            goalPos, = goalPosDict.values()
-            nearestGoalState = goalPos
+            if goalPosDict:
+                goalPos, = goalPosDict.values()
+                nearestGoalState[0] = self.handleEnv.normalize(goalPos[0], self.handleEnv.hO.tableCords['x'][0], self.handleEnv.hO.tableCords['x'][1])
+                nearestGoalState[1] = self.handleEnv.normalize(goalPos[1], self.handleEnv.hO.tableCords['y'][0], self.handleEnv.hO.tableCords['y'][1])
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
+
 
             
     def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
