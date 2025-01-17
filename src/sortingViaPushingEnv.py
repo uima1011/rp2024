@@ -49,14 +49,16 @@ class sortingViaPushingEnv(gym.Env):
 		self.misbehaviour = self.hdlEnv.checkMisbehaviour() # Task ended unsuccessfully (object falls from table or robot away from table)
 		self.timeout, self.counter, self.prevEpisodeCount = self.calcReward.taskTimeout(self.stepCount, self.episodeCount, self.prevEpisodeCount, self.counter) # timeout because robot not fullfiling task
 		self.truncated = self.misbehaviour or self.timeout
+		if self.misbehaviour:
+			self.reward = -1000
 
 		observation = self.hdlEnv.getStates()
+		
 		info = {'Episode': self.episodeCount, 'Step': self.stepCount, 'Counter': self.counter, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated, 'Observation': observation}
 		pprint(info)
 		self.stepCount += 1
-		if self.misbehaviour:
-			self.reward = -100
-		self.reward -= 0.01 # small penalty for faster learning
+
+
 		return observation, self.reward, self.terminated, self.truncated, info
 	
 	def reset(self, seed=None):
