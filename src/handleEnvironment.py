@@ -26,8 +26,6 @@ class HandleEnvironment():
         self.bullet_client = BulletClient(connection_mode=p.GUI)
         self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         # Initialize previous states for velocity computation
-        self.previous_object_states = None
-        self.previous_robot_state = None
         self.dt = self.bullet_client.getPhysicsEngineParameters()['fixedTimeStep'] # timestep in seconds
         if not render:
             self.bullet_client.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
@@ -36,15 +34,15 @@ class HandleEnvironment():
 
     def getBoundaries(self):
         '''Returns the boundaries of the observation space.'''
-        maxXRange = self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0] + 0.1 # because relativ pos and offset because robot spawns behind table
-        maxYRange = self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0] + 0.1
+        maxXRange = 1 # because relativ pos and offset because robot spawns behind table
+        maxYRange = 1
 
         robotLow = np.array([-maxXRange, -maxYRange])
         robotHigh = np.array([maxXRange, maxYRange])
-        objectLow = np.tile([-maxXRange, -maxYRange, -2*np.pi], MAX_OBJECT_COUNT)
-        objectHigh = np.tile([maxXRange, maxYRange, 2*np.pi], MAX_OBJECT_COUNT)
-        goalLow = np.tile([-maxXRange, -maxYRange, -2*np.pi], len(colours))
-        goalHigh = np.tile([maxXRange, maxYRange, 2*np.pi], len(colours))
+        objectLow = np.tile([-maxXRange, -maxYRange, -1], MAX_OBJECT_COUNT)
+        objectHigh = np.tile([maxXRange, maxYRange, 1], MAX_OBJECT_COUNT)
+        goalLow = np.tile([-maxXRange, -maxYRange, -1], len(colours))
+        goalHigh = np.tile([maxXRange, maxYRange, 1], len(colours))
 
         lowBounds = np.concatenate([robotLow, objectLow, goalLow])
         highBounds = np.concatenate([robotHigh, objectHigh, goalHigh])
@@ -56,8 +54,6 @@ class HandleEnvironment():
         self.robot.home()
         self.IDs = {}
         # reset velocity
-        self.previous_object_states = None
-        self.previous_robot_state = None
         self.hO.reset() # reset objects and goals
         print("Environment resetted")
 
@@ -100,21 +96,49 @@ class HandleEnvironment():
     def getIDs(self):
         return self.IDs          
 
-    def _getCoordinates(self):
-        '''Returns the relative coordinates of objects and goals with respect to the robot's end-effector.'''
+    def transformOriginToTableCenter(self, position):
+        '''Transforms the origin to the center of the table and return the new position.'''
+        x, y = position
+        xCenterTransform = self.hO.tableCords['x'][0] + (self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0]) / 2
+        yCenterTransform = self.hO.tableCords['y'][0] + (self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0]) / 2
+        return x - xCenterTransform, y - yCenterTransform
+
+    def normalize(self, value, mode):
+        '''Normalize a value to the range [-1, 1] with respect to the axis'''
+        if mode == 'relX': # use diagonal lenght of table
+            xLength = self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0] # + 2 * self.hO.tableOffset['x']
+            normalizedValue = value / xLength
+        elif mode == 'relY':
+            yLength = self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0] # + 2 * self.hO.tableOffset['y']
+            normalizedValue = value / yLength
+        elif mode == 'absX':
+            normalizedValue = value / ((self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0]) / 2)
+        elif mode == 'absY':
+            normalizedValue = value / ((self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0]) / 2)
+        elif mode == 'ang':
+            wrappedAngle = np.arctan2(np.sin(value), np.cos(value)) # normalize angle to [-pi, pi]
+            normalizedValue =  wrappedAngle / np.pi # normalize to [-1, 1]
+        return np.clip(normalizedValue, -1, 1)
+
+    def getRelativePositions(self):
+        '''Returns the relative normalized positions and angle of objects and goals with respect to the robot's end-effector.'''
         objectStates, goalStates = [], []
 
         # Get robot position (end-effector pose)
-        robotState = self.robot.get_eef_pose().translation[:2]
-
+        robotPosition = self.transformOriginToTableCenter(self.robot.get_eef_pose().translation[:2])
+        robotState = [self.normalize(robotPosition[0], 'absX'), self.normalize(robotPosition[1], 'absY')]
         for key, ids in self.IDs.items():
             states = []
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+            for bulletID in ids:
+                pos, ori = self.bullet_client.getBasePositionAndOrientation(bulletID)
                 zAngle = R.from_quat(ori).as_euler('xyz')[2]
 
                 # Compute relative position (object/goal position - robot position)
-                relative_pos = [pos[0] - robotState[0], pos[1] - robotState[1], zAngle]
+                transPos = self.transformOriginToTableCenter(pos[:2])
+                relNormX = self.normalize(transPos[0] - robotPosition[0], 'relX')
+                relNormY = self.normalize(transPos[1] - robotPosition[1], 'relY')
+                zAngNorm = self.normalize(zAngle, 'ang') # no need for normalization since TCP is always at 0 deg
+                relative_pos = [relNormX, relNormY, zAngNorm]
                 states.extend(relative_pos)
 
             if 'goal' in key:
@@ -125,51 +149,16 @@ class HandleEnvironment():
 
         # Pad object states to ensure consistent size
         paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
-
-        # Store current states for velocity computation
-        self.previous_object_states = paddedObjStates
-        self.previous_robot_state = robotState
-
         return robotState, paddedObjStates, goalStates
 
     def getStates(self):
         '''Combines positions and velocities into a single observation.'''
         # Get current positions
-        robotState, paddedObjStates, goalStates = self._getCoordinates()
+        robotState, paddedObjStates, goalStates = self.getRelativePositions()
 
         # Concatenate states and velocities for the final observation
         return np.concatenate([robotState, paddedObjStates, np.array(goalStates)])
-    
-    def getStatesOnlyNearestObject(self, nearestObjID):
-        self.nearestObjID = nearestObjID
-        '''Only returns robot state, nearest object rel and rel goals'''
-        # Get current positions
-        robotState, paddedObjStates, goalStates = self._getCoordinates()
-
-        # Compute velocities based on current and previous positions
-        robotVelocity, paddedObjVelocities = self._getVelocities(robotState, paddedObjStates)
-
-        # Concatenate states and velocities for the final observation
-        return np.concatenate([robotState, np.zeros(2), paddedObjStates, np.zeros(3 * MAX_OBJECT_COUNT), np.array(goalStates)])
-
-
-    def _getVelocities(self, current_robot_state, current_object_states):
-        '''Computes the velocities of the robot and objects using finite differences.'''
-        # Ensure previous states are available
-        if self.previous_object_states is None or self.previous_robot_state is None:
-            zero_robot_velocity = np.zeros(2)
-            zero_object_velocity = np.zeros(3 * MAX_OBJECT_COUNT)
-            return zero_robot_velocity, zero_object_velocity
-
-        # Compute finite differences for velocities
-        robotVelocity = (np.array(current_robot_state) - np.array(self.previous_robot_state)) / self.dt
-        objectVelocities = (np.array(current_object_states) - np.array(self.previous_object_states)) / self.dt
-
-        # Pad object velocities to ensure consistent size
-        paddedObjVelocities = np.pad(objectVelocities, (0, 3 * MAX_OBJECT_COUNT - len(objectVelocities)), constant_values=0)
-
-        return robotVelocity, paddedObjVelocities
-    
+        
     def getPositions(self):
         '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
         positionDict = {'goals': {}, 'objects': {}, 'robot': []}
@@ -217,14 +206,12 @@ class HandleEnvironment():
 
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
-        offX = 0.25 # offset
-        offY = 0.1
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
         leaved = True
-        if robotX < tableX[1]+offX and robotX > tableX[0]-offX: # check x
-            if robotY < tableY[1]+offY and robotY > tableY[0]-offY: # check y
+        if robotX < tableX[1]+self.hO.tableOffset['x'] and robotX > tableX[0]-self.hO.tableOffset['x']: # check x
+            if robotY < tableY[1]+self.hO.tableOffset['y'] and robotY > tableY[0]-self.hO.tableOffset['y']: # check y
                 leaved = False
                 
         if leaved:
@@ -259,6 +246,7 @@ class HandleObjects():
                     'x':[0.3, 0.9], # min, max
                     'y':[-0.29, 0.29]
                     }
+        self.tableOffset = {'x': 0.1, 'y': 0.1}
         self.objectWidth = 0.05
         self.goalWidths = {
                             'x': 3*self.objectWidth + 0.01, # numb*min_size_object + offset --> 9 objets fit in goal
@@ -452,6 +440,67 @@ class CalcReward():
             return float('inf')
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
 
+    
+    def polarityCross(self, nearestObjID):
+        """
+        Determine if the robot's TCP is on the correct side of the object using the cross product method.
+        
+        Parameters:
+        object_pos (list or tuple): Position of the object [x, y].
+        goal_pos (list or tuple): Position of the goal [x, y].
+        tcp_pos (list or tuple): Position of the TCP [x, y].
+        
+        Returns:
+        int: +1 if on the correct side, -1 if on the wrong side, 0 if exactly on the line.
+        """
+        for key, objPositions in self.positions['objects'].items():
+            if nearestObjID in objPositions:
+                objPos = objPositions[nearestObjID][:2]
+                colour = key.split('_')[1]
+                break
+        goalPos = next((pos[1] for (obj, pos) in self.positions['goals'].items() if f'goal_{colour}' in obj), None)[:2]
+        
+        # Extract coordinates
+
+        # Compute vectors
+        og = np.array(goalPos) - np.array(objPos)  # Vector from object to goal
+        ot = np.array(self.positions['robot']) - np.array(objPos)   # Vector from object to TCP
+        
+        # Normalize vectors
+        og_norm = np.linalg.norm(og)
+        ot_norm = np.linalg.norm(ot)
+        
+        if og_norm == 0 or ot_norm == 0:
+            raise ValueError("Zero-length vector encountered.")
+        
+        cos_theta = np.dot(og, ot) / (og_norm * ot_norm)  # Compute cosine of angle
+        
+        # Return polarity: +1 if cos_theta < 0, -1 otherwise
+        return +1 if cos_theta < 0 else -1
+        
+
+    def checkAlignment(self, nearestObjID):
+        for key, objPositions in self.positions['objects'].items():
+            if nearestObjID in objPositions:
+                objPos = objPositions[nearestObjID][:2]
+                colour = key.split('_')[1]
+                break
+        goalPos = next((pos[1] for (obj, pos) in self.positions['goals'].items() if f'goal_{colour}' in obj), None)[:2]
+        
+        vec_obj_goal = np.array(goalPos) - np.array(objPos)
+        vec_rob_obj = np.array(objPos) - np.array(self.positions['robot'])
+        
+        # Normalize vectors
+        vec_obj_goal /= np.linalg.norm(vec_obj_goal)
+        vec_rob_obj /= np.linalg.norm(vec_rob_obj)
+        
+        # Dot product gives cosine of angle between vectors
+        alignment = np.dot(vec_obj_goal, vec_rob_obj)
+        
+        # Reward based on alignment (closer to 1 is better)
+        print(f"Alignment: {alignment}")
+        return alignment
+
     def calcReward(self):
         self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
@@ -557,22 +606,44 @@ class CalcReward():
             reward = 100
             self.prevNearObjectID = self.nearObjectID
             return reward
+        
         distCloseToRobot = 0.05
         distCloseToGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
+        reward = 0
+        # Polarity check (penalty if on wrong side)
+        side = self.polarityCross(self.nearObjectID)
+        if side < 0:
+            reward -= 5
+
         if self.distRobToObj > distCloseToRobot: # Task: move to object
             print("task move robot to object")
-            reward = self.prevDistRobToObj - self.distRobToObj
+            reward += (self.prevDistRobToObj - self.distRobToObj)*5
         elif self.distObjToGoal > distCloseToGoal: # Task: push object into goal
             print("task push object into goal")
-            reward = self.prevDistObjToGoal - self.distObjToGoal
+            reward += (self.prevDistObjToGoal - self.distObjToGoal)*5
+            alignmentReward = self.checkAlignment(self.nearObjectID)
+            reward += alignmentReward*10
         else:
             print("Error, shouldnt come here")
             reward = 0
+
+        reward -= 0.1 # Time based penalty 
+        # Prevent oscillations
+        if self.distRobToObj > self.prevDistRobToObj:
+            reward -= 1  # Penalty for increasing distance to object   
         self.prevNearObjectID = self.nearObjectID
         self.prevDistRobToObj = self.distRobToObj
         self.prevDistObjToGoal = self.distObjToGoal
         self.prevDistRobToGoal = self.distRobToGoal
-        return reward
+        return self.normReward(reward)
+
+    def normReward(self, reward):
+        min_reward = -1000
+        max_reward = 100
+
+        # Normalize reward to [-1, 1]
+        normalized_reward = 2 * (reward - min_reward) / (max_reward - min_reward) - 1
+        return normalized_reward
 
     def taskFinished(self):
         '''checks if all objects are inside their goal zones --> returns true otherwhise false'''
@@ -585,12 +656,12 @@ class CalcReward():
 
     def taskTimeout(self, steps, episode, prevEpisode, counter):
         '''check if current Task timeouts with increasing complexity and time'''
-        maxSteps = 750
+        maxSteps = 1000
         if episode%50==0 and episode != prevEpisode:
             prevEpisode = episode
             counter += 1
         
-        if steps >= 50+10*counter or steps >= maxSteps:
+        if steps >= maxSteps: # steps >= 50+10*counter or 
             timeout = True
         else:
             timeout = False
