@@ -358,6 +358,15 @@ class CalcReward():
         colour = objName.split('_')[1]
         _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions.items() if f'goal_{colour}' in self.positions), None)
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
+    
+    def taskFinished(self):
+        '''checks if all objects are inside their goal zones --> returns true otherwhise false'''
+        for key, values in self.handleEnv.IDs.items():
+            if 'goal' not in key and 'robot' not in key:
+                for id in values:
+                    if not self.checkObjectInsideGoal(id):
+                        return False
+        return True
 
     def calcReward(self):
         self.positions = self.handleEnv.getPositions()

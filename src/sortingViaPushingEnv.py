@@ -37,27 +37,26 @@ class sortingViaPushingEnv(gym.Env):
 		
 	def step(self, action):
 		self.hdlEnv.performAction(action)
-		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
-		if self.done:
-			self.reward = -1000
+		self.terminated = self.calcReward.taskFinished()
+		if self.hdlEnv.checkMisbehaviour():
+			self.terminated = True
+			self. reward = -1000
 		else:
 			self.reward = self.calcReward.calcReward()
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
-		else:
-			self.truncated = False # TODO ist das nicht sowieso schon false?
-		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Done': self.done, 'Truncated': self.truncated}
+		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated}
 		print(info)
 		self.stepCount += 1
 		#observation = self.hdlEnv.getStates()
 		observation = self.calcReward.getStatePositions()
 
-		return observation, self.reward, self.done, self.truncated, info
+		return observation, self.reward, self.terminated, self.truncated, info
 	
 	def reset(self, seed=None):
 		super().reset(seed=seed)
 		self.stepCount = 0
-		self.done = False
+		self.terminated = False
 		self.truncated  = False
 		self.prevReward = 0
 		self.hdlEnv.resetEnvironment()
