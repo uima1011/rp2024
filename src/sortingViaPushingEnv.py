@@ -39,7 +39,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv.performAction(action)
 		self.done = self.hdlEnv.checkMisbehaviour() # TODO 
 		if self.done:
-			self.reward = -100
+			self.reward = -1000
 		else:
 			self.reward = self.calcReward.calcReward()
 		if self.stepCount >= MAX_STEPS-1:
@@ -51,7 +51,6 @@ class sortingViaPushingEnv(gym.Env):
 		self.stepCount += 1
 		#observation = self.hdlEnv.getStates()
 		observation = self.calcReward.getStatePositions()
-		print(observation)
 
 		return observation, self.reward, self.done, self.truncated, info
 	
