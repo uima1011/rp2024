@@ -112,9 +112,9 @@ class HandleEnvironment():
             yLength = self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0] # + 2 * self.hO.tableOffset['y']
             normalizedValue = value / yLength
         elif mode == 'absX':
-            normalizedValue = value / ((self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0]) / 2)
+            normalizedValue = value / ((self.hO.tableCords['x'][1] - self.hO.tableCords['x'][0])/2+0.1)
         elif mode == 'absY':
-            normalizedValue = value / ((self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0]) / 2)
+            normalizedValue = value / ((self.hO.tableCords['y'][1] - self.hO.tableCords['y'][0])/2+0.1)
         elif mode == 'ang':
             wrappedAngle = np.arctan2(np.sin(value), np.cos(value)) # normalize angle to [-pi, pi]
             normalizedValue =  wrappedAngle / np.pi # normalize to [-1, 1]
@@ -135,8 +135,8 @@ class HandleEnvironment():
 
                 # Compute relative position (object/goal position - robot position)
                 transPos = self.transformOriginToTableCenter(pos[:2])
-                relNormX = self.normalize(transPos[0] - robotPosition[0], 'relX')
-                relNormY = self.normalize(transPos[1] - robotPosition[1], 'relY')
+                relNormX = self.normalize(transPos[0], 'absX') # - robotPosition[0], 'relX')
+                relNormY = self.normalize(transPos[1], 'absY') # - robotPosition[1], 'relY')
                 zAngNorm = self.normalize(zAngle, 'ang') # no need for normalization since TCP is always at 0 deg
                 relative_pos = [relNormX, relNormY, zAngNorm]
                 states.extend(relative_pos)
@@ -601,11 +601,11 @@ class CalcReward():
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
         if self.prevNearObjectID is None and self.nearObjectID is None: # object spawned in goal
             reward = 0
-            return reward
+            return self.normReward(reward)
         if self.prevNearObjectID != self.nearObjectID and self.prevNearObjectID is not None: 
             reward = 100
             self.prevNearObjectID = self.nearObjectID
-            return reward
+            return self.normReward(reward)
         
         distCloseToRobot = 0.05
         distCloseToGoal = self.handleEnv.hO.goalWidths['x']/2-self.handleEnv.hO.objectWidth/2
@@ -639,7 +639,7 @@ class CalcReward():
 
     def normReward(self, reward):
         min_reward = -1000
-        max_reward = 100
+        max_reward = 1000
 
         # Normalize reward to [-1, 1]
         normalized_reward = 2 * (reward - min_reward) / (max_reward - min_reward) - 1
