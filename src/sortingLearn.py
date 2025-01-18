@@ -11,7 +11,7 @@ class CustomMLPPolicy(ActorCriticPolicy):
 											  activation_fn= nn.ReLU,)
 
 TIMESTEPS = 10000
-MODEL = "DQN_normedRewards_notSymmetric"
+MODEL = "DQN_normedRewards_Symmetric_absPositions"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
