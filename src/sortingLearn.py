@@ -36,6 +36,8 @@
 #	iters += 1
 #	model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=MODEL)
 #	model.save(f"{modelsDir}/{TIMESTEPS*iters}")
+
+# python3 -m tensorboard.main --logdir=data/logs
      
 
 from stable_baselines3 import DQN
@@ -43,7 +45,7 @@ import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
 TIMESTEPS = 10000
-MODEL = "DQN_normiert"
+MODEL = "DQN_normiert_4"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
@@ -55,7 +57,7 @@ if not os.path.exists(logDir):
 # Umgebung initialisieren
 env = svpEnv()
 
-model = DQN('MlpPolicy',
+model = DQN.load(f"/home/group1/workspace/data/models/DQN_normiert/20000.zip",
     env, 
     gamma=0.99, 
     learning_rate=1e-4,  # Stabileres Lernen
