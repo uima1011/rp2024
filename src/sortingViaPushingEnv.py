@@ -34,6 +34,8 @@ class sortingViaPushingEnv(gym.Env):
 		self.hdlEnv = HandleEnvironment(RENDER, ASSETS_PATH)
 		self.calcReward = CalcReward(self.hdlEnv)
 		self.stepCount = 0
+		self.startDistance = 1000.0
+		self.score = 0
 		
 	def step(self, action):
 		self.hdlEnv.performAction(action)
@@ -50,6 +52,27 @@ class sortingViaPushingEnv(gym.Env):
 		self.stepCount += 1
 		#observation = self.hdlEnv.getStates()
 		observation = self.calcReward.getStatePositions()
+		
+		# log score
+		if (self.calcReward.nearObjectID != self.calcReward.prevNearObjectID) and (self.calcReward.nearObjectID is not None):
+			self.score += 1
+			self.startDistance = self.calcReward.distObjToGoal
+		if self.stepCount == 1:
+			self.startDistance = self.calcReward.distObjToGoal
+		elif self.truncated:
+			if self.startDistance is None:
+				self.startDistance = 1000.0
+			self.score += (self.startDistance - self.calcReward.distObjToGoal) / self.startDistance
+			self.startDistance = 1000.0
+			# safe score in csv file
+			with open('score.csv', 'a') as f:
+				f.write(f"{self.score}\n")
+			self.score = 0
+		elif self.terminated:
+			self.score = -1
+			with open('score.csv', 'a') as f:
+				f.write(f"{self.score}\n")
+			self.score = 0
 
 		return observation, self.reward, self.terminated, self.truncated, info
 	

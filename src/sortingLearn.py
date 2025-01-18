@@ -45,7 +45,7 @@ import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
 TIMESTEPS = 10000
-MODEL = "DQN_normiert_4"
+MODEL = "DQN_normiert_5"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
@@ -57,7 +57,7 @@ if not os.path.exists(logDir):
 # Umgebung initialisieren
 env = svpEnv()
 
-model = DQN.load(f"/home/group1/workspace/data/models/DQN_normiert/20000.zip",
+model = DQN.load(f"/home/group1/workspace/data/train/DQN_normiert/models/20000.zip",
     env, 
     gamma=0.99, 
     learning_rate=1e-4,  # Stabileres Lernen
