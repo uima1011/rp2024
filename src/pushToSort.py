@@ -9,8 +9,8 @@ def test_model(model_path, env):
     obs, _info = env.reset()
     for _ in range(1000):
         action, _states = model.predict(obs)
-        obs, rewards, dones, truncated, info = env.step(action)
-        if dones:
+        obs, rewards, terminated, truncated, info = env.step(action)
+        if terminated:
             obs = env.reset()
 
 if __name__ == "__main__":
