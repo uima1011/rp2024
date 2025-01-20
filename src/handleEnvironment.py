@@ -356,7 +356,8 @@ class CalcReward():
     def getDistRobToGoal(self, objID):
         objName, _ = next(((obj, pos[objID]) for (obj, pos) in self.positions.items() if objID in self.positions[obj]), None)
         colour = objName.split('_')[1]
-        _, goalPos = next(((obj, pos[1]) for (obj, pos) in self.positions.items() if f'goal_{colour}' in self.positions), None)
+        _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
+        goalPos, = goalPosDict.values()
         return self.calculateDistance(self.positions['robot'], goalPos[:2])
     
     def taskFinished(self):
