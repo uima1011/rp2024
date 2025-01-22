@@ -52,32 +52,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.stepCount += 1
 		#observation = self.hdlEnv.getStates()
 		observation = self.calcReward.getStatePositions()
-		
-		# log score
-		if (self.calcReward.nearObjectID != self.calcReward.prevNearObjectID) and (self.calcReward.prevNearObjectID is not None):
-			self.score += 1
-			self.calcReward.positions = self.calcReward.handleEnv.getPositions()
-			self.startDistance = self.calcReward.getDistObjToGoal(self.calcReward.nearObjectID)
-		if self.stepCount == 2:
-			self.calcReward.positions = self.calcReward.handleEnv.getPositions()
-			self.startDistance = self.calcReward.getDistObjToGoal(self.calcReward.nearObjectID)
-			print(f"Start distance: {self.startDistance}")
-		elif self.truncated:
-			if self.startDistance is None:
-				self.startDistance = 0.0001
-			self.calcReward.positions = self.calcReward.handleEnv.getPositions()
-			print(f"Start distance: {self.startDistance}")
-			print(f"ObjToGoal distance: {self.calcReward.getDistObjToGoal(self.calcReward.nearObjectID)}")
-			self.score += (self.startDistance - self.calcReward.getDistObjToGoal(self.calcReward.nearObjectID)) / self.startDistance
-			# safe score in csv file
-			with open('score.csv', 'a') as f:
-				f.write(f"{round(self.score, 2)}\n")
-			self.score = 0
-		elif self.terminated:
-			self.score = -1
-			with open('score.csv', 'a') as f:
-				f.write(f"{round(self.score, 2)}\n")
-			self.score = 0
+		self.calcReward.logScore(self.terminated, self.truncated, self.stepCount)
 
 		return observation, self.reward, self.terminated, self.truncated, info
 	
