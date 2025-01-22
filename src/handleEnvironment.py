@@ -299,6 +299,7 @@ class CalcReward():
         self.distRobToGoal, self.distObjToGoal, self.distRobToObj  = None, None, None
         self.prevDistRobToGoal, self.prevDistObjToGoal, self.prevDistRobToObj = None, None, None
         self.nearObjectID, self.prevNearObjectID = None, None
+        self.score = 0
         self.positions = self.handleEnv.getPositions()
 
     def reset(self):
@@ -463,12 +464,12 @@ class CalcReward():
             print(f"ObjToGoal distance: {self.getDistObjToGoal(self.nearObjectID)}")
             self.score += (self.startDistance - self.getDistObjToGoal(self.nearObjectID)) / self.startDistance
             # safe score in csv file
-            with open('score.csv', 'a') as f:
+            with open('data/score.csv', 'a') as f:
                 f.write(f"{round(self.score, 2)}\n")
             self.score = 0
         elif terminated:
             self.score = -1
-            with open('score.csv', 'a') as f:
+            with open('data/score.csv', 'a') as f:
                 f.write(f"{round(self.score, 2)}\n")
             self.score = 0
             
