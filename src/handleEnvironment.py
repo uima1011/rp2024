@@ -102,15 +102,50 @@ class HandleEnvironment():
         paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
         return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
 
+    #def getPositions(self):
+    #    '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
+    #    positionDict = {}
+    #    for key, ids in self.IDs.items():
+    #        positionDict[key] = {}
+    #        for id in ids:
+    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
+    #            positionDict[key][id] = [pos[0], pos[1], zAngle]
+    #    positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
+    #    return positionDict
+    
+    # new function with padding:
+
     def getPositions(self):
-        '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
+        # Vorgabe, wie viele Einträge pro Objekttyp vorhanden sein sollen
+        required_counts = {
+            'goal_green': 1,
+            'goal_red': 1,
+            'plus_green': 4,
+            'plus_red': 4,
+            'cube_green': 4,
+            'cube_red': 4
+        }
+
         positionDict = {}
         for key, ids in self.IDs.items():
+            # Standardmäßig 4 Einträge, falls key nicht in required_counts definiert
+            count_needed = required_counts.get(key, 4)
             positionDict[key] = {}
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-                zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                positionDict[key][id] = [pos[0], pos[1], zAngle]
+
+            # Positionen für vorhandene IDs ermitteln
+            for i, obj_id in enumerate(ids):
+                if i < count_needed:
+                    pos, ori = self.bullet_client.getBasePositionAndOrientation(obj_id)
+                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
+                    positionDict[key][obj_id] = [pos[0], pos[1], zAngle]
+
+            # Fehlende Einträge mit -1 auffüllen
+            existing_len = len(positionDict[key])
+            for j in range(existing_len, count_needed):
+                positionDict[key][f"dummy"] = [None, None, None]
+
+        # Roboter-Position
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
 
@@ -326,11 +361,12 @@ class CalcReward():
                     if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
                         # Check each position for an object (in case of multiple positions like 'plus_red')
                         for id, obj_position in positionsDict.items():
-                            distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                            if distance < minDistance: # new minDistance and objekt outside of goal
-                                if not self.checkObjectInsideGoal(id):
-                                    minDistance = distance
-                                    self.nearObjectID = id
+                            if id is not 'dummy': # ignore padded dummy values
+                                distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                                if distance < minDistance: # new minDistance and objekt outside of goal
+                                    if not self.checkObjectInsideGoal(id):
+                                        minDistance = distance
+                                        self.nearObjectID = id
                 if self.nearObjectID is None:
                     return None, None        
                 return minDistance, self.nearObjectID
@@ -392,17 +428,17 @@ class CalcReward():
         reward = -1
         if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001) or (self.distRobToObj < 0.1):
             reward += 1.9
-        elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
-            reward -= 3.9
+        #elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
+        #    reward -= 3.9
         if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001:
             reward += 10
-        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
-            reward -= 10
-        if (self.distRobToGoal < self.distObjToGoal):
-            if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
-                reward -= 1
-            elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
-                reward += 1
+        #elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
+        #    reward -= 10
+        #if (self.distRobToGoal < self.distObjToGoal):
+        #    if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
+        #        reward -= 1
+        #    elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
+        #        reward += 1
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
 
