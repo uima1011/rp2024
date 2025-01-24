@@ -520,33 +520,7 @@ class CalcReward():
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
 
-    def logScore(self, terminated, truncated, stepCount):
-        '''Logs the distance the Obj moves to Goal per Episode in a csv file'''
-        if (self.nearObjectID != self.prevNearObjectID) and (self.prevNearObjectID is not None):
-            self.score += 1
-            self.positions = self.handleEnv.getPositions()
-            self.startDistance = self.getDistObjToGoal(self.nearObjectID)
-        if stepCount == 2:
-            self.positions = self.handleEnv.getPositions()
-            self.startDistance = self.getDistObjToGoal(self.nearObjectID)
-            print(f"Start distance: {self.startDistance}")
-        elif truncated:
-            if self.startDistance is None:
-                self.startDistance = 0.0001
-            self.positions = self.handleEnv.getPositions()
-            print(f"Start distance: {self.startDistance}")
-            print(f"ObjToGoal distance: {self.getDistObjToGoal(self.nearObjectID)}")
-            self.score += (self.startDistance - self.getDistObjToGoal(self.nearObjectID)) / self.startDistance
-            # safe score in csv file
-            with open('data/score.csv', 'a') as f:
-                f.write(f"{round(self.score, 2)}\n")
-            self.score = 0
-        elif terminated:
-            self.score = -1
-            with open('data/score.csv', 'a') as f:
-                f.write(f"{round(self.score, 2)}\n")
-            self.score = 0
-            
+    
     # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
     #     reward = 0
     #     self.positions = self.handleEnv.getPositions()
