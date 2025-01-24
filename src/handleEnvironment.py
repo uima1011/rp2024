@@ -12,7 +12,8 @@ import time
 colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
-MAX_OBJECT_COUNT = 4*len(colours)*len(parts)
+MAX_OBJECT_PER_TYPE = 4
+MAX_OBJECT_COUNT = MAX_OBJECT_PER_TYPE*len(colours)*len(parts)
 
 class HandleEnvironment():
     def __init__(self, render, assets_folder):
@@ -79,28 +80,65 @@ class HandleEnvironment():
         midpoint = (min_val + max_val) / 2
         return (value - midpoint) / (max_val - midpoint)
 
+    #def getStates(self):
+    #    '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
+    #    objectStates, goalStates = [], []
+    #    for key, ids in self.IDs.items():
+    #        states = []
+    #        for id in ids:
+    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
+    #            # Normalize x and y positions
+    #            norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+    #            norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+    #            states.extend([norm_x, norm_y, zAngle])
+    #        if 'goal' in key:
+    #            goalStates.extend(states)
+    #        else:
+    #            objectStates.extend(states)
+    #    robotPose = self.robot.get_eef_pose().translation[:2]
+    #    # Normalize robot pose
+    #    norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+    #    norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+    #    paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
+    #    return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
+
     def getStates(self):
         '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
         objectStates, goalStates = [], []
+        MAX_OBJECT_PER_TYPE = 4  # Anzahl Objekte pro Typ
         for key, ids in self.IDs.items():
             states = []
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-                zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                # Normalize x and y positions
-                norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-                norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-                states.extend([norm_x, norm_y, zAngle])
+            for i in range(MAX_OBJECT_PER_TYPE):
+                if i < len(ids):
+                    pos, ori = self.bullet_client.getBasePositionAndOrientation(ids[i])
+                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
+                    # Normalize x und y Positionen
+                    norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                    norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                    states.extend([norm_x, norm_y, zAngle])
+                else:
+                    # Falls weniger als 4 IDs vorhanden sind, mit 0er auffüllen
+                    states.extend([0, 0, 0])
             if 'goal' in key:
                 goalStates.extend(states)
             else:
                 objectStates.extend(states)
+
+        # Roboterposition
         robotPose = self.robot.get_eef_pose().translation[:2]
-        # Normalize robot pose
         norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
         norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-        paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
+
+        # Gesamtlänge Objektvektor anpassen (falls globale MAX_OBJECT_COUNT existiert)
+        paddedObjStates = np.pad(
+            objectStates,
+            (0, 3 * MAX_OBJECT_COUNT - len(objectStates)),
+            constant_values=0
+        )
+
         return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
+
 
     #def getPositions(self):
     #    '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
