@@ -104,40 +104,28 @@ class HandleEnvironment():
     #    return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
 
     def getStates(self):
-        '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
-        objectStates, goalStates = [], []
-        MAX_OBJECT_PER_TYPE = 4  # Anzahl Objekte pro Typ
-        for key, ids in self.IDs.items():
-            states = []
-            for i in range(MAX_OBJECT_PER_TYPE):
-                if i < len(ids):
-                    pos, ori = self.bullet_client.getBasePositionAndOrientation(ids[i])
-                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                    # Normalize x und y Positionen
-                    norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-                    norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-                    states.extend([norm_x, norm_y, zAngle])
-                else:
-                    # Falls weniger als 4 IDs vorhanden sind, mit 0er auffüllen
-                    states.extend([0, 0, 0])
-            if 'goal' in key:
-                goalStates.extend(states)
+        """Returns normalized, flattened list as observation for robot, objects, and goals."""
+        self.positions = self.getPositions()
+        states = []
+        for main_key, sub_dict in self.positions.items():
+            # Roboter hat nur x,y
+            if main_key == 'robot':
+                norm_x = self.normalize(sub_dict[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                norm_y = self.normalize(sub_dict[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                states.extend([norm_x, norm_y])
+            # Alle anderen Einträge sind weitere Dicts
             else:
-                objectStates.extend(states)
-
-        # Roboterposition
-        robotPose = self.robot.get_eef_pose().translation[:2]
-        norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-        norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-
-        # Gesamtlänge Objektvektor anpassen (falls globale MAX_OBJECT_COUNT existiert)
-        paddedObjStates = np.pad(
-            objectStates,
-            (0, 3 * MAX_OBJECT_COUNT - len(objectStates)),
-            constant_values=0
-        )
-
-        return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
+                for sub_key, pos in sub_dict.items():
+                    # Dummy-Einträge mit None sollen zu [0,0,0] werden
+                    if sub_key == 'dummy' or any(v is None for v in pos):
+                        states.extend([0, 0, 0])
+                    else:
+                        # Ziele und Objekte haben x,y + Winkel (Z-Orientierung)
+                        norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                        norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                        zAngle = pos[2]
+                        states.extend([norm_x, norm_y, zAngle])
+        return states
 
 
     #def getPositions(self):
@@ -155,7 +143,6 @@ class HandleEnvironment():
     # new function with padding:
 
     def getPositions(self):
-        # Vorgabe, wie viele Einträge pro Objekttyp vorhanden sein sollen
         required_counts = {
             'goal_green': 1,
             'goal_red': 1,
@@ -167,18 +154,15 @@ class HandleEnvironment():
 
         positionDict = {}
         for key, ids in self.IDs.items():
-            # Standardmäßig 4 Einträge, falls key nicht in required_counts definiert
             count_needed = required_counts.get(key, 4)
             positionDict[key] = {}
 
-            # Positionen für vorhandene IDs ermitteln
             for i, obj_id in enumerate(ids):
                 if i < count_needed:
                     pos, ori = self.bullet_client.getBasePositionAndOrientation(obj_id)
                     zAngle = R.from_quat(ori).as_euler('xyz')[2]
                     positionDict[key][obj_id] = [pos[0], pos[1], zAngle]
 
-            # Fehlende Einträge mit -1 auffüllen
             existing_len = len(positionDict[key])
             for j in range(existing_len, count_needed):
                 positionDict[key][f"dummy"] = [None, None, None]
@@ -186,6 +170,7 @@ class HandleEnvironment():
         # Roboter-Position
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
+
 
     def performAction(self, action):
         current_pose = self.robot.get_eef_pose()
@@ -400,7 +385,7 @@ class CalcReward():
                     if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
                         # Check each position for an object (in case of multiple positions like 'plus_red')
                         for id, obj_position in positionsDict.items():
-                            if id is not 'dummy': # ignore padded dummy values
+                            if id != 'dummy':  # Skip dummy objects
                                 distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
                                 if distance < minDistance: # new minDistance and objekt outside of goal
                                     if not self.checkObjectInsideGoal(id):
