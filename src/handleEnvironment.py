@@ -115,9 +115,9 @@ class HandleEnvironment():
                 states.extend([norm_x, norm_y])
             # Alle anderen Einträge sind weitere Dicts
             else:
-                for sub_key, pos in sub_dict.items():
+                for _, pos in sub_dict.items():
                     # Dummy-Einträge mit None sollen zu [0,0,0] werden
-                    if sub_key == 'dummy' or any(v is None for v in pos):
+                    if (isinstance(sub_dict, str) and sub_dict.startswith("dummy_")) or any(v is None for v in pos):
                         states.extend([0, 0, 0])
                     else:
                         # Ziele und Objekte haben x,y + Winkel (Z-Orientierung)
@@ -165,7 +165,7 @@ class HandleEnvironment():
 
             existing_len = len(positionDict[key])
             for j in range(existing_len, count_needed):
-                positionDict[key][f"dummy"] = [None, None, None]
+                positionDict[key][f"dummy_{j}"] = [None, None, None]
 
         # Roboter-Position
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
@@ -385,7 +385,7 @@ class CalcReward():
                     if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
                         # Check each position for an object (in case of multiple positions like 'plus_red')
                         for id, obj_position in positionsDict.items():
-                            if id != 'dummy':  # Skip dummy objects
+                            if obj_position != [None, None, None]:
                                 distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
                                 if distance < minDistance: # new minDistance and objekt outside of goal
                                     if not self.checkObjectInsideGoal(id):
