@@ -109,7 +109,7 @@ class sortingViaPushingEnv(gym.Env):
 		self.terminated = self.calcReward.taskFinished()
 		if self.hdlEnv.checkMisbehaviour():
 			self.terminated = True
-			self. reward = -1000
+			self.reward = -1000
 		else:
 			self.reward = self.calcReward.calcReward()
 		if self.stepCount >= MAX_STEPS-1:

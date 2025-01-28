@@ -485,6 +485,15 @@ class CalcReward():
         #        reward += 1
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+    
+        self.prevDistRobToObj = self.distRobToObj 
+        self.prevDistObjToGoal = self.distObjToGoal 
+        self.prevDistRobToGoal = self.distRobToGoal 
+
+        return reward
+
+
+
     def calcReward2(self):
         step = 1 # 1 = move to obj, 2 = move obj to goal
 
