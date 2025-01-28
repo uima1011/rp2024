@@ -28,8 +28,8 @@ class sortingViaPushingEnv(gym.Env):
 	def __init__(self):
 		super(sortingViaPushingEnv, self).__init__()
 		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
-		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
-		#state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * 1 + GOAL_STATE_COUNT * 1 # robot + max objects + goal states
+		#state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
+		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * 1 + GOAL_STATE_COUNT * 1 # robot + max objects + goal states
 		self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf,
 											shape=(state_dim,), dtype=np.float64)
 		self.hdlEnv = HandleEnvironment(RENDER, ASSETS_PATH)
@@ -117,9 +117,8 @@ class sortingViaPushingEnv(gym.Env):
 		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated}
 		print(info)
 		self.stepCount += 1
-		observation = self.hdlEnv.getStates()
-		#print("Statres:" , self.hdlEnv.getStates())
-		#observation = self.calcReward.getStatePositions()
+		#observation = self.hdlEnv.getStates()
+		observation = self.calcReward.getStatePositions()
 		
 		#self.logScore()
 		self.logScoreAllObjects()
@@ -139,8 +138,8 @@ class sortingViaPushingEnv(gym.Env):
 		self.calcReward.reset()
 		
         # create observation
-		observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
-		#observation = self.calcReward.getStatePositions()
+		#observation = self.hdlEnv.getStates() # robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
+		observation = self.calcReward.getStatePositions()
 
 		info = {}
 

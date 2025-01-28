@@ -45,7 +45,7 @@ import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
 TIMESTEPS = 10000
-MODEL = "DQN_normiert_push_after_to_object_4"
+MODEL = "DQN_normiert_full_observationspace_corrected_padding"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
@@ -57,7 +57,7 @@ if not os.path.exists(logDir):
 # Umgebung initialisieren
 env = svpEnv()
 
-model = DQN.load("../data/models/DQN_normiert_push_after_to_object_3/70000.zip",
+model = DQN('MlpPolicy', 
     env, 
     gamma=0.99, 
     learning_rate=1e-4,  # Stabileres Lernen
