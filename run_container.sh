@@ -21,6 +21,5 @@ docker run \
   -v /tmp/.X11-unix:/tmp/.X11-unix -v /mnt/wslg:/mnt/wslg \
   -e DISPLAY="$DISPLAY" -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
   -e PULSE_SERVER=$PULSE_SERVER \
-  --gpus all \
   -p 6006:6006 \
  rp2024/sorting-via-pushing
