@@ -16,7 +16,7 @@ objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
 
 ROBOT_STATE_COUNT = 2 # x and y
-MAX_OBJECT_COUNT = 4*len(colours)*len(parts) # max 4 of each object type and colour
+MAX_OBJECT_COUNT = 3*len(colours)*len(parts) # max 4 of each object type and colour
 GOAL_COUNT = len(colours) # red and green
 OBJECT_STATE_COUNT = 3 # x, y and rotation arround z
 GOAL_STATE_COUNT = 3 # x, y and rotation arround z

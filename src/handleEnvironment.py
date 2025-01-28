@@ -12,7 +12,7 @@ import time
 colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
-MAX_OBJECT_COUNT = 4*len(colours)*len(parts)
+MAX_OBJECT_COUNT = 3*len(colours)*len(parts)
 
 class HandleEnvironment():
     def __init__(self, render, assets_folder):
@@ -221,7 +221,7 @@ class HandleObjects():
         for folder, part in zip(objectFolders, parts):
             for col in colours:
                 urdfPath = os.path.join(self.urdfPathObjects, folder, f'{part}_{col}.urdf')
-                objCount = np.random.randint(1, MAX_OBJECT_COUNT / len(colours) / len(parts))
+                objCount = np.random.randint(1, (MAX_OBJECT_COUNT / len(colours) / len(parts))+1)
                 spawned_count = 0
                 for _ in range(objCount):
                     for _ in range(max_attempts):
