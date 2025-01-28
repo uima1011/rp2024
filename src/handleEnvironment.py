@@ -12,7 +12,8 @@ import time
 colours = ['green', 'red']
 objectFolders = ['signs', 'cubes']
 parts = ['plus', 'cube']
-MAX_OBJECT_COUNT = 3*len(colours)*len(parts)
+MAX_OBJECT_PER_TYPE = 3
+MAX_OBJECT_COUNT = MAX_OBJECT_PER_TYPE*len(colours)*len(parts)
 
 class HandleEnvironment():
     def __init__(self, render, assets_folder):
@@ -79,40 +80,97 @@ class HandleEnvironment():
         midpoint = (min_val + max_val) / 2
         return (value - midpoint) / (max_val - midpoint)
 
+    #def getStates(self):
+    #    '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
+    #    objectStates, goalStates = [], []
+    #    for key, ids in self.IDs.items():
+    #        states = []
+    #        for id in ids:
+    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
+    #            # Normalize x and y positions
+    #            norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+    #            norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+    #            states.extend([norm_x, norm_y, zAngle])
+    #        if 'goal' in key:
+    #            goalStates.extend(states)
+    #        else:
+    #            objectStates.extend(states)
+    #    robotPose = self.robot.get_eef_pose().translation[:2]
+    #    # Normalize robot pose
+    #    norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+    #    norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+    #    paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
+    #    return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
+
     def getStates(self):
-        '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
-        objectStates, goalStates = [], []
-        for key, ids in self.IDs.items():
-            states = []
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-                zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                # Normalize x and y positions
-                norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-                norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-                states.extend([norm_x, norm_y, zAngle])
-            if 'goal' in key:
-                goalStates.extend(states)
+        """Returns normalized, flattened list as observation for robot, objects, and goals."""
+        self.positions = self.getPositions()
+        states = []
+        for main_key, sub_dict in self.positions.items():
+            # Roboter hat nur x,y
+            if main_key == 'robot':
+                norm_x = self.normalize(sub_dict[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                norm_y = self.normalize(sub_dict[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                states.extend([norm_x, norm_y])
+            # Alle anderen Einträge sind weitere Dicts
             else:
-                objectStates.extend(states)
-        robotPose = self.robot.get_eef_pose().translation[:2]
-        # Normalize robot pose
-        norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-        norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-        paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
-        return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
+                for _, pos in sub_dict.items():
+                    # Dummy-Einträge mit None sollen zu [0,0,0] werden
+                    if (isinstance(sub_dict, str) and sub_dict.startswith("dummy_")) or any(v is None for v in pos):
+                        states.extend([0, 0, 0])
+                    else:
+                        # Ziele und Objekte haben x,y + Winkel (Z-Orientierung)
+                        norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
+                        norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
+                        zAngle = pos[2]
+                        states.extend([norm_x, norm_y, zAngle])
+        return states
+
+
+    #def getPositions(self):
+    #    '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
+    #    positionDict = {}
+    #    for key, ids in self.IDs.items():
+    #        positionDict[key] = {}
+    #        for id in ids:
+    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
+    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
+    #            positionDict[key][id] = [pos[0], pos[1], zAngle]
+    #    positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
+    #    return positionDict
+    
+    # new function with padding:
 
     def getPositions(self):
-        '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
+        required_counts = {
+            'goal_green': 1,
+            'goal_red': 1,
+            'plus_green': 4,
+            'plus_red': 4,
+            'cube_green': 4,
+            'cube_red': 4
+        }
+
         positionDict = {}
         for key, ids in self.IDs.items():
+            count_needed = required_counts.get(key, 4)
             positionDict[key] = {}
-            for id in ids:
-                pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-                zAngle = R.from_quat(ori).as_euler('xyz')[2]
-                positionDict[key][id] = [pos[0], pos[1], zAngle]
+
+            for i, obj_id in enumerate(ids):
+                if i < count_needed:
+                    pos, ori = self.bullet_client.getBasePositionAndOrientation(obj_id)
+                    zAngle = R.from_quat(ori).as_euler('xyz')[2]
+                    positionDict[key][obj_id] = [pos[0], pos[1], zAngle]
+
+            existing_len = len(positionDict[key])
+            for j in range(existing_len, count_needed):
+                positionDict[key][f"dummy_{j}"] = [None, None, None]
+
+        # Roboter-Position
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
+
 
     def performAction(self, action):
         current_pose = self.robot.get_eef_pose()
@@ -327,11 +385,12 @@ class CalcReward():
                     if 'robot' not in key and 'goal' not in key:  # We don't want to compare robot to itself or to goal
                         # Check each position for an object (in case of multiple positions like 'plus_red')
                         for id, obj_position in positionsDict.items():
-                            distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                            if distance < minDistance: # new minDistance and objekt outside of goal
-                                if not self.checkObjectInsideGoal(id):
-                                    minDistance = distance
-                                    self.nearObjectID = id
+                            if obj_position != [None, None, None]:
+                                distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                                if distance < minDistance: # new minDistance and objekt outside of goal
+                                    if not self.checkObjectInsideGoal(id):
+                                        minDistance = distance
+                                        self.nearObjectID = id
                 if self.nearObjectID is None:
                     return None, None        
                 return minDistance, self.nearObjectID
@@ -413,17 +472,17 @@ class CalcReward():
         reward = -1
         if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001) or (self.distRobToObj < 0.1):
             reward += 1.9
-        elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
-            reward -= 3.9
+        #elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
+        #    reward -= 3.9
         if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001:
             reward += 10
-        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
-            reward -= 10
-        if (self.distRobToGoal < self.distObjToGoal):
-            if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
-                reward -= 1
-            elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
-                reward += 1
+        #elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
+        #    reward -= 10
+        #if (self.distRobToGoal < self.distObjToGoal):
+        #    if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
+        #        reward -= 1
+        #    elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
+        #        reward += 1
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
     def calcReward2(self):
@@ -505,33 +564,7 @@ class CalcReward():
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
 
-    def logScore(self, terminated, truncated, stepCount):
-        '''Logs the distance the Obj moves to Goal per Episode in a csv file'''
-        if (self.nearObjectID != self.prevNearObjectID) and (self.prevNearObjectID is not None):
-            self.score += 1
-            self.positions = self.handleEnv.getPositions()
-            self.startDistance = self.getDistObjToGoal(self.nearObjectID)
-        if stepCount == 2:
-            self.positions = self.handleEnv.getPositions()
-            self.startDistance = self.getDistObjToGoal(self.nearObjectID)
-            print(f"Start distance: {self.startDistance}")
-        elif truncated:
-            if self.startDistance is None:
-                self.startDistance = 0.0001
-            self.positions = self.handleEnv.getPositions()
-            print(f"Start distance: {self.startDistance}")
-            print(f"ObjToGoal distance: {self.getDistObjToGoal(self.nearObjectID)}")
-            self.score += (self.startDistance - self.getDistObjToGoal(self.nearObjectID)) / self.startDistance
-            # safe score in csv file
-            with open('data/score.csv', 'a') as f:
-                f.write(f"{round(self.score, 2)}\n")
-            self.score = 0
-        elif terminated:
-            self.score = -1
-            with open('data/score.csv', 'a') as f:
-                f.write(f"{round(self.score, 2)}\n")
-            self.score = 0
-            
+    
     # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
     #     reward = 0
     #     self.positions = self.handleEnv.getPositions()
