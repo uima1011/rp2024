@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Daten aus der CSV-Datei laden
-with open('score.csv') as f:
+with open('./data/score.csv') as f:
     lines = f.readlines()
 
 # Werte in eine Liste konvertieren
