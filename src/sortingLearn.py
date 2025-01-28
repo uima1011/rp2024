@@ -45,7 +45,7 @@ import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
 TIMESTEPS = 10000
-MODEL = "DQN_normiert_full_observationspace_corrected_padding"
+MODEL = "DQN_normiert_small_observationspace_corrected_padding"
 
 modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
 if not os.path.exists(modelsDir):
