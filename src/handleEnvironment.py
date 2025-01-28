@@ -146,10 +146,10 @@ class HandleEnvironment():
         required_counts = {
             'goal_green': 1,
             'goal_red': 1,
-            'plus_green': 4,
-            'plus_red': 4,
-            'cube_green': 4,
-            'cube_red': 4
+            'plus_green': MAX_OBJECT_PER_TYPE,
+            'plus_red': MAX_OBJECT_PER_TYPE,
+            'cube_green': MAX_OBJECT_PER_TYPE,
+            'cube_red': MAX_OBJECT_PER_TYPE
         }
 
         positionDict = {}
