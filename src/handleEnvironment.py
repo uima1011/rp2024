@@ -410,11 +410,12 @@ class CalcReward():
         for key, positionsDict in self.positions.items():
             if 'robot' not in key and 'goal' not in key:
                 for id, obj_position in positionsDict.items():
-                    distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                    if distance < minDistance: # new minDistance and objekt outside of goal
-                        if not self.checkObjectInsideGoal(id):
-                            minDistance = distance
-                            self.nearObjectID = id
+                    if type(id) == int:
+                        distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
+                        if distance < minDistance: # new minDistance and objekt outside of goal
+                            if not self.checkObjectInsideGoal(id):
+                                minDistance = distance
+                                self.nearObjectID = id
         if self.nearObjectID is None:
             return None, None 
         return minDistance, self.nearObjectID
