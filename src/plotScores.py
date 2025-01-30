@@ -17,8 +17,8 @@ titel = [
     "DQN: Normal",
     "DQN: Small Observation Space",
     "DQN: Allow Switch Objects",
-    "DQN: Distance Comparison",
-    "DQN: Reward Changed",
+    "DQN: Reward Comparision RobToGoal vs ObjToGoal",
+    "DQN: Reward Circle Function",
     "DQN: Push Negative Reward"
 ]
 
