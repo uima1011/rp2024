@@ -450,6 +450,50 @@ class CalcReward():
                         return False
         return True
 
+
+    def getAngleRobVsObjToGoal(self):
+        objName, objPos = next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None)
+        colour = objName.split('_')[1]
+        _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
+        goalPos, = goalPosDict.values()
+        robotPos = self.positions['robot']
+        #print(f"Robot Position: x={robotPos[0]}, y={robotPos[1]}")
+        #print(f"Object Position: x={objPos[0]}, y={objPos[1]}")
+        #print(f"Goal Position: x={goalPos[0]}, y={goalPos[1]}")
+
+        # Calculate the vector from the object to the goal
+        vector_obj_to_goal = [goalPos[0] - objPos[0], goalPos[1] - objPos[1]]
+        # Calculate the angle between the vector to the goal and the x-axis
+        angle_obj_to_goal = np.degrees(np.arctan2(vector_obj_to_goal[1], vector_obj_to_goal[0]))
+        if angle_obj_to_goal < 0:
+            angle_obj_to_goal += 360  # Ensure the angle is in the range [0, 360)
+        # Convert to clockwise angle
+        angle_obj_to_goal = (360 - angle_obj_to_goal) % 360
+        # Adjust so that 0° is defined as the negative x-direction
+        angle_obj_to_goal = (angle_obj_to_goal + 180) % 360
+        # Note: 0° is defined as the negative x-direction, and angles increase clockwise.
+        #print(f"Angle Object to goal (clockwise): {angle_obj_to_goal}")
+
+        # Calculate the vector from the robot to the object
+        vector_robot_to_obj = [objPos[0] - robotPos[0], objPos[1] - robotPos[1]]
+        # Calculate the angle between the vector to the object and the x-axis
+        angle_robot_to_obj = np.degrees(np.arctan2(vector_robot_to_obj[1], vector_robot_to_obj[0]))
+        if angle_robot_to_obj < 0:
+            angle_robot_to_obj += 360  # Ensure the angle is in the range [0, 360)
+        # Convert to clockwise angle
+        angle_robot_to_obj = (360 - angle_robot_to_obj) % 360
+        # Adjust so that 0° is defined as the negative x-direction
+        angle_robot_to_obj = (angle_robot_to_obj + 180) % 360
+        # Note: 0° is defined as the negative x-direction, and angles increase clockwise.
+        #print(f"Angle Robot to object (clockwise): {angle_robot_to_obj}")
+
+        angle_difference = abs(angle_robot_to_obj - angle_obj_to_goal)
+        if angle_difference > 180:
+            angle_difference = 360 - angle_difference
+        return angle_difference
+
+
+
     def calcReward(self):
         self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
@@ -470,26 +514,86 @@ class CalcReward():
         #distance of robot to goal for nearest object
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
         #remeber distances for next step
-        reward = -1
-        if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001) or (self.distRobToObj < 0.1):
-            reward += 1.9
-        #elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
-        #    reward -= 3.9
+        reward = -1 # time penalty to make robot fulfill task with the least steps possible 
+        
+        angle_difference = self.getAngleRobVsObjToGoal()
+        print(f"Angle Robot dissenting from perfect position (=0°): {angle_difference}")
+
+        if (self.distRobToGoal < self.distObjToGoal): # robot is closer to goal than object is to goal
+            # (robot in front of object)
+            print(f"Robot in front of object")
+            #print(f"Robot to goal: {self.distRobToGoal}")
+            #print(f"Object to goal: {self.distObjToGoal}")
+            reward -= 1.0 # general penalty for robot being closer to goal than object is to goal
+            if (self.distRobToObj < 0.1):
+                reward += 0
+                # zone in front half of object that permits free movement of robot around object without touching it 
+                
+                if (self.distRobToObj < 0.05) and (self.distRobToGoal < self.distObjToGoal):
+                    reward -= 10
+                    # penalty if robot is in front half of object and too close to object
+                    # robot is between object and goal
+            else:
+                if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001): 
+                    reward += 3.9
+                    # reward if robot is moving towards object, but only till distance of 0.3 is reached
+                elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
+                    reward -= 3.7    
+                    # penalty if robot is moving away from object, only given if out of circle with radius 0.3
+        
+        else: # robot is further away from goal than object is to goal 
+            # (robot behind object)
+            print(f"Robot behind of object")
+            #print(f"Robot to goal: {self.distRobToGoal}")
+            #print(f"Object to goal: {self.distObjToGoal}")
+            reward += 0.5 # general reward for robot being further away from goal than object is to goal 
+            if angle_difference < 30:
+                if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001):
+                    reward += 4
+                    # reward if robot is moving towards object
+                    # robot may move "into" object (=pushing)
+                elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001:
+                    reward -= 4
+
         if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001:
             reward += 10
-        #elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
-        #    reward -= 10
-        #if (self.distRobToGoal < self.distObjToGoal):
-        #    if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
-        #        reward -= 1
-        #    elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
-        #        reward += 1
+        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
+            reward -= 15
+
+        ## nicht verwendet in “DQN_normiert_full_observationspace_reward_changed”
+        # Reward for robot moving away from goal (only if robot is closer to goal than object is to goal)
+        # if (self.distRobToGoal < self.distObjToGoal):
+        #     if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
+        #         reward -= 1
+        #     elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
+        #         reward += 1
+
+        # if (self.prevDistRobToObj - self.distRobToObj) > 0.0001: 
+        #     reward += 4 
+        # elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001: 
+        #     reward -= 4 
+
+        # if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001: 
+        #     reward += 10 
+        # elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001: 
+        #     reward -= 15 
+
+        # # nicht verwendet in "DQN_norm_full_obssp_rew_dist_comparison_v01"
+        # # if (self.prevDistRobToGoal - self.distRobToGoal) > 0.00001: 
+        # #   reward -= 1 
+        # # elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.00001: 
+        # #   reward += 1 
+
+        # if (self.distRobToGoal - self.distObjToGoal) > 0.001: 
+        #     reward += 2 
+        # elif (self.distObjToGoal - self.distRobToGoal) > 0.001: 
+        #     reward -= 1 
 
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
-    
-        self.prevDistRobToObj = self.distRobToObj 
-        self.prevDistObjToGoal = self.distObjToGoal 
-        self.prevDistRobToGoal = self.distRobToGoal 
+        
+        self.prevDistRobToObj = self.distRobToObj
+        self.prevDistObjToGoal = self.distObjToGoal
+        self.prevDistRobToGoal = self.distRobToGoal
 
         return reward
 
