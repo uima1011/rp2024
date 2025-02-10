@@ -80,29 +80,6 @@ class HandleEnvironment():
         midpoint = (min_val + max_val) / 2
         return (value - midpoint) / (max_val - midpoint)
 
-    #def getStates(self):
-    #    '''Returns normalized, flattened list as observation for robot, objects, and goals.'''
-    #    objectStates, goalStates = [], []
-    #    for key, ids in self.IDs.items():
-    #        states = []
-    #        for id in ids:
-    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
-    #            # Normalize x and y positions
-    #            norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-    #            norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-    #            states.extend([norm_x, norm_y, zAngle])
-    #        if 'goal' in key:
-    #            goalStates.extend(states)
-    #        else:
-    #            objectStates.extend(states)
-    #    robotPose = self.robot.get_eef_pose().translation[:2]
-    #    # Normalize robot pose
-    #    norm_robot_x = self.normalize(robotPose[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
-    #    norm_robot_y = self.normalize(robotPose[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
-    #    paddedObjStates = np.pad(objectStates, (0, 3 * MAX_OBJECT_COUNT - len(objectStates)), constant_values=0)
-    #    return np.concatenate([np.array([norm_robot_x, norm_robot_y]), paddedObjStates, np.array(goalStates)])
-
     def getStates(self):
         """Returns normalized, flattened list as observation for robot, objects, and goals."""
         self.positions = self.getPositions()
@@ -126,21 +103,6 @@ class HandleEnvironment():
                         zAngle = pos[2]
                         states.extend([norm_x, norm_y, zAngle])
         return states
-
-
-    #def getPositions(self):
-    #    '''returns dict with nested list for dealing with position of robot, objects and goals individualy'''
-    #    positionDict = {}
-    #    for key, ids in self.IDs.items():
-    #        positionDict[key] = {}
-    #        for id in ids:
-    #            pos, ori = self.bullet_client.getBasePositionAndOrientation(id)
-    #            zAngle = R.from_quat(ori).as_euler('xyz')[2]
-    #            positionDict[key][id] = [pos[0], pos[1], zAngle]
-    #    positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
-    #    return positionDict
-    
-    # new function with padding:
 
     def getPositions(self):
         required_counts = {
@@ -189,14 +151,16 @@ class HandleEnvironment():
             new_x = current_pose.translation[0]
             new_y = current_pose.translation[1] - 0.01
         else:
-            return  # Invalid action
+            return False # Invalid action
 
         # Create a new target pose with updated x and y, keeping z the same and setting the fixed orientation
         target_pose = Affine(
-            translation=[new_x, new_y, -0.1],  # Keep z the same
-            rotation=fixed_orientation  # Set the fixed orientation
+            translation=[new_x, new_y, -0.1],  # Keep z the same (allow no drift)
+            rotation=fixed_orientation  # Set the fixed orientation (allow no drift)
         )
         self.robot.lin(target_pose)
+
+        return True
     
 
     def robotLeavedWorkArea(self):
@@ -208,6 +172,7 @@ class HandleEnvironment():
         if robotX < tableX[1] and robotX > tableX[0]: # check x
             if robotY < tableY[1] and robotY > tableY[0]: # check y
                 leaved = False
+
         return False # TODO activate with returning leaved
 
     def objectOffTable(self):
@@ -298,12 +263,6 @@ class HandleObjects():
             return None
         else:
             return self.objects
-        
-    def get_state_obj_z(self):
-        object_z_positions = {}
-        print(f"Self.objects: {self.objects}")
-        return object_z_positions
-
     
     # Goals:
     def generate_single_goal_area(self, table_coords, goal_width):
@@ -493,7 +452,26 @@ class CalcReward():
 
         return reward
 
+   
+    # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
+    #     reward = 0
+    #     self.positions = self.handleEnv.getPositions()
+    #     self.prevNearObjectID = self.nearObjectID
+    #     self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+    #     self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+    #     self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+    #     if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
+    #         self.prevDistRobToObj = self.distRobToObj
+    #         self.prevDistObjToGoal = self.distObjToGoal
+    #         self.prevDistRobToGoal = self.distRobToGoal
+    #         reward =+ 15 # award one more object in goal
 
+    #     rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
+    #     rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
+    #     rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
+    #     print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+    #     return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
+    
 
     def calcReward2(self):
         step = 1 # 1 = move to obj, 2 = move obj to goal
@@ -574,26 +552,7 @@ class CalcReward():
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
 
-    
-    # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
-    #     reward = 0
-    #     self.positions = self.handleEnv.getPositions()
-    #     self.prevNearObjectID = self.nearObjectID
-    #     self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
-    #     self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
-    #     self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
-    #     if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
-    #         self.prevDistRobToObj = self.distRobToObj
-    #         self.prevDistObjToGoal = self.distObjToGoal
-    #         self.prevDistRobToGoal = self.distRobToGoal
-    #         reward =+ 15 # award one more object in goal
-
-    #     rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
-    #     rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
-    #     rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
-    #     print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
-    #     return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
-    
+ 
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()

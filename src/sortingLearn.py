@@ -21,18 +21,18 @@ if not os.path.exists(logDir):
 
 env = svpEnv()
 
-model = DQN('MlpPolicy', 
-    env, 
-    gamma=0.99, 
-    learning_rate=1e-4,  # Stabileres Lernen
-    buffer_size=100000,  # Replay Buffer Größe
-    batch_size=64,  # Standardwert für DQN
-    train_freq=4,  # Training nach jeder 4. Aktion
-    target_update_interval=1000,  # Zielnetzwerk-Update-Intervall
-    exploration_fraction=0.1,  # 10% der Trainingszeit für Exploration
-    exploration_final_eps=0.02,  # Minimaler Explorationswert
-    verbose=1, 
-    tensorboard_log=logDir
+model = DQN('MlpPolicy',            # Policy-Netzwerk
+    env,                            # Umgebung
+    gamma=0.99,                     # Diskontierungsfaktor
+    learning_rate=1e-4,             # Stabileres Lernen
+    buffer_size=100000,             # Replay Buffer Größe
+    batch_size=64,                  # Standardwert für DQN
+    train_freq=4,                   # Training nach jeder 4. Aktion
+    target_update_interval=1000,    # Zielnetzwerk-Update-Intervall
+    exploration_fraction=0.1,       # 10% der Trainingszeit für Exploration
+    exploration_final_eps=0.02,     # Minimaler Explorationswert
+    verbose=1,                      # Ausführliche Ausgabe
+    tensorboard_log=logDir          # Tensorboard-Log-Verzeichnis
 )
 
 # Training
