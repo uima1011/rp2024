@@ -1,32 +1,32 @@
+# konfiguriere Trainings- und Umgebungsparameter hier:
 train:
-  name: "DQN_normiert_small_observationspace_corrected_padding"
-  dir: "/home/group1/workspace/data"
-  
-  timesteps: 10000
-  resetTimesteps: False 
-  policy: "MlpPolicy"
+  name: "DQN_normiert_small_observationspace_corrected_padding" # Trainingsname
+  dir: "/home/group1/workspace/data"                            # Verzeichnis zum Speichern der Trainingsdaten
+  timesteps: 10000                                              # Anzahl der Zeitschritte
+  resetTimesteps: False                                         # Zeitschritte nach jeder Episode zurücksetzen
+  policy: "MlpPolicy"                                           # Netzwerkarchitektur (2 versteckte Schichten mit je 64 Knoten)
   DQN:
-    gamma: 0.99
-    learning_rate: 1e-4
-    buffer_size: 100000
-    batch_size: 64
-    train_freq: 4
-    target_update_intervall: 1000
-    exploration_fraction: 0.1
-    exploration_final_eps: 0.02
-    verbose: 1
+    gamma: 0.99                                                 # Diskontierungsfaktor
+    learning_rate: 1e-4                                         # Lernrate für stabileres Lernen
+    buffer_size: 100000                                         # Größe des Replay Buffers
+    batch_size: 64                                              # Batch Größe (Standardwert für DQN)                               
+    train_freq: 4                                               # Training nach jeder 4. Aktion
+    target_update_intervall: 1000                               # Update des Target Networks nach 1000 Schritten
+    exploration_fraction: 0.1                                   # 10% der Trainingszeit für Exploration
+    exploration_final_eps: 0.02                                 # Minimaler Explorationswert
+    verbose: 1                                                  # Ausgabe von Informationen (1=ausführlich)
 env:
-  actions: 4
-  render: True
-  assetsPath: "/home/group1/workspace/assets"
-  maxSteps: 200
-  colours: ["red", "green"]
+  actions: 4                                                    # Anzahl der möglichen Aktionen
+  render: True                                                  # Visualisierung aktivieren
+  assetsPath: "/home/group1/workspace/assets"                   # Verzeichnis für die Assets
+  maxSteps: 200                                                 # Maximale Anzahl an Schritten pro Episode
+  colours: ["red", "green"]                                     # Farben der Objekte
   objects:
-    number: 3
-    dirs: ["signs", "cubes"]
-    parts: ["plus", "cube"]
-    states: 3
+    number: 3                                                   # Maximale Anzahl der Objekte
+    dirs: ["signs", "cubes"]                                    # Verzeichnisse der Objekte
+    parts: ["plus", "cube"]                                     # Teile der Objekte
+    states: 3                                                   # Anzahl der Zustände (x,y,z)
   goals:
-    states: 3  
+    states: 3                                                   # Anzahl der Zustände (x,y,z) 
   robot:
-    states: 2
+    states: 2                                                   # Anzahl der Zustände (x,y)
