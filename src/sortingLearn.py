@@ -4,16 +4,11 @@ Skript to train a model for the sorting via pushing task.
 # python3 -m tensorboard.main --logdir=data/logs
 
 from stable_baselines3 import DQN
-import yaml
 import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
+import config
 
-def load_config(config_path="./src/config.yaml"):
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
-
-cfg = load_config()
+cfg = config.load()
 cfg = cfg['train']
 
 TIMESTEPS = cfg['timesteps']
