@@ -22,25 +22,25 @@ if not os.path.exists(modelsDir):
 if not os.path.exists(logDir):
     os.makedirs(logDir)
 
-# Umgebung initialisieren
+# initialize environment
 
 env = svpEnv()
 
-model = DQN(cfg['policy'],            								# Policy-Netzwerk
-    env,                            								# Umgebung
-    gamma = cfg['DQN']['gamma'],                     				# Diskontierungsfaktor
-    learning_rate = float(cfg['DQN']['learning_rate']),             # Stabileres Lernen
-    buffer_size = cfg['DQN']['buffer_size'],             			# Replay Buffer Größe
-    batch_size = cfg['DQN']['batch_size'],                  		# Standardwert für DQN
-    train_freq = cfg['DQN']['train_freq'],                   		# Training nach jeder 4. Aktion
-    target_update_interval = cfg['DQN']['target_update_intervall'],	# Zielnetzwerk-Update-Intervall
-    exploration_fraction = cfg['DQN']['exploration_fraction'],      # 10% der Trainingszeit für Exploration
-    exploration_final_eps = cfg['DQN']['exploration_final_eps'],    # Minimaler Explorationswert
-    verbose = cfg['DQN']['verbose'],                      			# Ausführliche Ausgabe
-    tensorboard_log = logDir          								# Tensorboard-Log-Verzeichnis
+model = DQN(cfg['policy'],            								# policy network
+    env,                            								# environment
+    gamma = cfg['DQN']['gamma'],                     				# discount faktor
+    learning_rate = float(cfg['DQN']['learning_rate']),             # stable learning rate
+    buffer_size = cfg['DQN']['buffer_size'],             			# replay buffer size
+    batch_size = cfg['DQN']['batch_size'],                  		# standard for DQN
+    train_freq = cfg['DQN']['train_freq'],                   		# train every x steps
+    target_update_interval = cfg['DQN']['target_update_intervall'],	# update target network every x steps
+    exploration_fraction = cfg['DQN']['exploration_fraction'],      # exploration fraction
+    exploration_final_eps = cfg['DQN']['exploration_final_eps'],    # minimum epsilon
+    verbose = cfg['DQN']['verbose'],                      			# extensive output
+    tensorboard_log = logDir          								# tensorboard log directory
 )
 
-# Training
+# training
 
 iters = 0
 while True:

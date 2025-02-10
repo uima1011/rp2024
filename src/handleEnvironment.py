@@ -94,19 +94,19 @@ class HandleEnvironment():
         self.positions = self.getPositions()
         states = []
         for main_key, sub_dict in self.positions.items():
-            # Roboter hat nur x,y
+            # robot only uses x and y coordinates
             if main_key == 'robot':
                 norm_x = self.normalize(sub_dict[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
                 norm_y = self.normalize(sub_dict[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
                 states.extend([norm_x, norm_y])
-            # Alle anderen Einträge sind weitere Dicts
+            # All other entries are further dictionaries
             else:
                 for _, pos in sub_dict.items():
-                    # Dummy-Einträge mit None sollen zu [0,0,0] werden
+                    # Dummy-entries with None shall be changed to [0,0,0] 
                     if (isinstance(sub_dict, str) and sub_dict.startswith("dummy_")) or any(v is None for v in pos):
                         states.extend([0, 0, 0])
                     else:
-                        # Ziele und Objekte haben x,y + Winkel (Z-Orientierung)
+                        # goals and objects have x, y + angle (orientation around z-axis)
                         norm_x = self.normalize(pos[0], self.hO.tableCords['x'][0], self.hO.tableCords['x'][1])
                         norm_y = self.normalize(pos[1], self.hO.tableCords['y'][0], self.hO.tableCords['y'][1])
                         zAngle = pos[2]
@@ -138,7 +138,7 @@ class HandleEnvironment():
             for j in range(existing_len, count_needed):
                 positionDict[key][f"dummy_{j}"] = [None, None, None]
 
-        # Roboter-Position
+        # Robot position
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
 
@@ -207,7 +207,7 @@ class HandleObjects():
                     }
         self.objectWidth = 0.05
         self.goalWidths = {
-                            'x': 3*self.objectWidth + 0.01, # numb*min_size_object + offset --> 9 objets fit in goal
+                            'x': 3*self.objectWidth + 0.01, # numb*min_size_object + offset --> 9 objects fit in goal
                             'y': 3*self.objectWidth + 0.01
                             }  
 
@@ -362,7 +362,7 @@ class CalcReward():
                 if self.checkObjectInsideGoal(self.nearObjectID): # check if nearest object is inside goal area
                         self.nearObjectID = None
                         dist = None
-                else:  # Abstand berechnen
+                else:  # calculate distance
                     for key, positionsDict in self.positions.items():
                         if self.nearObjectID in positionsDict:
                             dist = self.calculateDistance(self.positions['robot'], positionsDict[self.nearObjectID][:2])
@@ -376,7 +376,7 @@ class CalcReward():
                 for id, obj_position in positionsDict.items():
                     if type(id) == int:
                         distance = self.calculateDistance(self.positions['robot'], obj_position[:2])
-                        if distance < minDistance: # new minDistance and objekt outside of goal
+                        if distance < minDistance: # new minDistance and object outside of goal
                             if not self.checkObjectInsideGoal(id):
                                 minDistance = distance
                                 self.nearObjectID = id
