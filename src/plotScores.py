@@ -4,9 +4,8 @@ Skript to plot the scores of the different models.
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
 
-# Dateinamen
+# filenames
 dateien = [
     "score_DQN_normiert_full_observationspace_corrected_padding.csv",
     "score_DQN_normiert_small_observationspace_corrected_padding.csv",
@@ -16,7 +15,7 @@ dateien = [
     "DQN_normiert_push_after_to_object_withNegativRewards.csv"
 ]
 
-# geänderte Titel
+# changed titles
 titel = [
     "DQN: Normal",
     "DQN: Small Observation Space",
@@ -26,11 +25,11 @@ titel = [
     "DQN: Push Negative Reward"
 ]
 
-# Anzahl der Subplots
+# number of subplots
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 axes = axes.flatten()
 
-# Daten plotten
+# plot data
 for ax, datei, titel_text in zip(axes, dateien, titel):
     with open(f'../data/scores/{datei}') as f:
         lines = f.readlines()

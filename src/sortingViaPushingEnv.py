@@ -61,11 +61,11 @@ class sortingViaPushingEnv(gym.Env):
 		def dist(a, b): 
 			return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
-		# Echte Goal-Positionen ermitteln (einziger Nicht-Dummy-Eintrag)
+		# get real goal positions (only non dummy values)
 		greenGoalPos = next((v for v in positions['goal_green'].values() if v != [None, None, None]), [0,0,0])
 		redGoalPos   = next((v for v in positions['goal_red'].values()   if v != [None, None, None]), [0,0,0])
 
-		# Distanzen aufsummieren
+		# sum up distances
 		distances = {}
 		for obj_type in ['plus_green', 'cube_green']:
 			distances[obj_type] = sum(dist(v, greenGoalPos)
