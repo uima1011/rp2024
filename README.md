@@ -40,6 +40,7 @@ view full Task under ``project\rp_Project_Assignment.pdf``
 │   └── util
 │       ├── ...
 ├── src
+│   ├── config.py 
 │   ├── config.yaml
 │   ├── changeUrdfRectangle.py
 │   ├── transform.py
@@ -52,10 +53,6 @@ view full Task under ``project\rp_Project_Assignment.pdf``
 │   ├── __init__.py
 │   ├── bullet_env
 │   │   ├── bullet_robot.py
-│   │   ├── ...
-│   ├── __pycache__
-│   │   ├── ...
-│   ├── lib
 │   │   ├── ...
 ├── project
 │   ├── block_push.gif
