@@ -1,3 +1,18 @@
+'''
+	creates gymnasium environment for RL:
+	- action_space: 4 directions (forward, backward, left, right)
+	- observation_space: robot state, object state, goal state (x,y|x,y,degZ|x,y,degZ)
+	- reward: reward for each step
+	- step: perform action and return observation, reward, terminated, truncated, info
+	- reset: reset environment and return observation, info
+
+	Additional functions for calculating behaviour of agent:
+	- _computeDistances: compute distances between objects and goals
+	- score: how far where the objects pushed by the agent
+		- logScoreAllObjects: log the score of all objects for the agent
+		- logScore: log the score of one object for the agent
+'''
+
 import gymnasium as gym
 import numpy as np
 import math
