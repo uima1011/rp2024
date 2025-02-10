@@ -1,5 +1,5 @@
 '''
-Skript contains functions to handle the environment (objects, goals and rewards)
+    Skript contains functions to handle the environment (objects, goals and rewards)
 '''
 
 from pybullet_utils.bullet_client import BulletClient
@@ -25,6 +25,12 @@ MAX_OBJECT_PER_TYPE = cfg['objects']['number']
 MAX_OBJECT_COUNT = MAX_OBJECT_PER_TYPE*len(colours)*len(parts)
 
 class HandleEnvironment():
+    '''
+        handles the environment, robot, objects and goals
+        --> controls spawning and resetting
+        --> get positions of robot, objects and goals
+        --> check missbehaviour (out of bounds etc...)
+    '''
     def __init__(self, render, assets_folder):
         self.urdfPathRobot = os.path.join(assets_folder, 'urdf', 'robot_without_gripper.urdf')
         self.urdfPathGoal = os.path.join(assets_folder, 'objects', 'goals')
@@ -171,7 +177,7 @@ class HandleEnvironment():
         return True
     
     def robotLeavedWorkArea(self):
-        '''returns True if robot out of Area''' # TODO
+        '''returns True if robot out of Area'''
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
@@ -179,8 +185,7 @@ class HandleEnvironment():
         if robotX < tableX[1] and robotX > tableX[0]: # check x
             if robotY < tableY[1] and robotY > tableY[0]: # check y
                 leaved = False
-
-        return False # TODO activate with returning leaved
+        return leaved
 
     def objectOffTable(self):
         for key , values in self.IDs.items():
@@ -201,6 +206,9 @@ class HandleEnvironment():
         return misbehaviour
 
 class HandleObjects():
+    '''
+        generate object- and goal cords for HandleEnvironment class
+    '''
     def __init__(self, assets_folder):
         self.tableCords = {
                     'x':[0.3, 0.9], # min, max
@@ -317,6 +325,10 @@ class HandleObjects():
         print("Objects and goals resetted")
 
 class CalcReward():
+    '''
+        calculates the reward for the current state of the environment
+        --> calculates distance of robot to nearest object, object to goal and robot to goal
+    '''
     def __init__(self, handleEnv):
         self.handleEnv = handleEnv
         self.distRobToGoal, self.distObjToGoal, self.distRobToObj  = None, None, None

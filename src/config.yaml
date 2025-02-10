@@ -15,18 +15,19 @@ train:
     exploration_fraction: 0.1                                     # 10% of training time for exploration
     exploration_final_eps: 0.02                                   # minimum exploration value
     verbose: 1                                                    # output information (1=verbose)
-  env:
-    actions: 4                                                    # number of possible actions
-    render: True                                                  # enable visualization
-    assetsPath: "/home/group1/workspace/assets"                   # directory for the assets
-    maxSteps: 200                                                 # maximum number of steps per episode
-    colours: ["red", "green"]                                     # colors of the objects
-    objects:
-      number: 3                                                   # maximum number of objects
-      dirs: ["signs", "cubes"]                                    # directories of the objects
-      parts: ["plus", "cube"]                                     # parts of the objects
-      states: 3                                                   # number of states (x,y,z)
-    goals:
-      states: 3                                                   # number of states (x,y,z)
-    robot:
-      states: 2                                                   # number of states (x,y)
+env:
+  actions: 4                                                      # number of possible actions
+  render: True                                                    # enable visualization
+  assetsPath: "/home/group1/workspace/assets"                     # directory for the assets
+  maxSteps: 200                                                   # maximum number of steps per episode
+  colours: ["red", "green"]                                       # colors of the objects
+  objects:
+    number: 3                                                     # maximum number of objects
+    dirs: ["signs", "cubes"]                                      # directories of the objects
+    parts: ["plus", "cube"]                                       # parts of the objects
+    states: 3                                                     # number of states (x,y,z)
+  goals:    
+    states: 3                                                     # number of states (x,y,z)
+  robot:  
+    states: 2                                                     # number of states (x,y)
+  
