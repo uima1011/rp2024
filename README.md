@@ -40,6 +40,7 @@ view full Task under ``project\rp_Project_Assignment.pdf``
 │   └── util
 │       ├── ...
 ├── src
+│   ├── config.yaml
 │   ├── changeUrdfRectangle.py
 │   ├── transform.py
 │   ├── plotScores.py
@@ -80,9 +81,15 @@ In `run_container.sh` choose between
 * without graphics-card: remove line: `--gpus all \`
 
 ## Run project
+This repo is dockerized, to run/use it in the docker container follow the steps bellow.
+
 First run in terminal:
 * `./build_image.sh`
 * `./run_container.sh`
+
+Config:
+
+* `config.yaml`: set parameters for training, environment, ... here
 
 Executable skripts:
 
