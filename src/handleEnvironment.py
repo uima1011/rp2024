@@ -455,6 +455,7 @@ class CalcReward():
         angle_difference = abs(angle_robot_to_obj - angle_obj_to_goal)
         if angle_difference > 180:
             angle_difference = 360 - angle_difference
+            
         return angle_difference
 
 
