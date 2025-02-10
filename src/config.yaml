@@ -1,6 +1,7 @@
 train:
   name: "DQN_normiert_small_observationspace_corrected_padding"
   dir: "/home/group1/workspace/data"
+  
   timesteps: 10000
   resetTimesteps: False 
   policy: "MlpPolicy"
@@ -14,4 +15,18 @@ train:
     exploration_fraction: 0.1
     exploration_final_eps: 0.02
     verbose: 1
-    
+env:
+  actions: 4
+  render: True
+  assetsPath: "/home/group1/workspace/assets"
+  maxSteps: 200
+  colours: ["red", "green"]
+  objects:
+    number: 3
+    dirs: ["signs", "cubes"]
+    parts: ["plus", "cube"]
+    states: 3
+  goals:
+    states: 3  
+  robot:
+    states: 2
