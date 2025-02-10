@@ -1,3 +1,7 @@
+'''
+Skript to change the URDF file of the goal object.
+'''
+
 import xml.etree.ElementTree as ET
 import re
 
