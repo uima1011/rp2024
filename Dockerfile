@@ -69,6 +69,7 @@ RUN pip install --no-cache-dir scipy
 RUN pip install --no-cache-dir --timeout=10000 stable-baselines3
 RUN pip install --no-cache-dir "shimmy>=2.0"
 RUN pip install --no-cache-dir tensorboard
+RUN pip install --no-cache-dir PyYAML
 
 ENV PYTHONPATH=/home/$USER/workspace/src:$PYTHONPATH
 
