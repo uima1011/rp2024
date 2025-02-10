@@ -1,14 +1,14 @@
+'''
+Skript to test the environment manually.
+'''
+
 from pprint  import pprint
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 from stable_baselines3.common.env_checker import check_env
 import sys
 
-
-
 test = 2 # 1 = testEnv, 2 = controll robot with keyboard, 3 = random Actions in a loop
-
 env = svpEnv()
-
 
 def moveRobotKeyboard():
     manualTermination = False
@@ -27,7 +27,6 @@ def moveRobotKeyboard():
     else: # typing error
         return None, False
     return translatedInput, manualTermination
-
 
 def main():
     if test == 3:
@@ -63,9 +62,6 @@ def main():
     else:
         check_env(env) # test 2
         env.close()
-
-            
-        
 
 if __name__ == '__main__':
     main()

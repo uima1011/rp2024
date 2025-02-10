@@ -1,7 +1,6 @@
 '''
 Skript to train a model for the sorting via pushing task.
 '''
-# python3 -m tensorboard.main --logdir=data/logs
 
 from stable_baselines3 import DQN
 import yaml
@@ -31,7 +30,6 @@ if not os.path.exists(logDir):
 # Umgebung initialisieren
 
 env = svpEnv()
-
 
 model = DQN(cfg['policy'],            								# Policy-Netzwerk
     env,                            								# Umgebung

@@ -1,3 +1,7 @@
+'''
+Skript to use a model for the sorting via pushing task.
+'''
+
 from stable_baselines3 import PPO
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
