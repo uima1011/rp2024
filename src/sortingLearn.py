@@ -4,16 +4,27 @@ Skript to train a model for the sorting via pushing task.
 # python3 -m tensorboard.main --logdir=data/logs
 
 from stable_baselines3 import DQN
+import yaml
 import os
 from sortingViaPushingEnv import sortingViaPushingEnv as svpEnv
 
-TIMESTEPS = 10000
-MODEL = "DQN_normiert_small_observationspace_corrected_padding"
+def load_config(config_path="./src/config.yaml"):
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
+    return config
 
-modelsDir = f"/home/group1/workspace/data/models/{MODEL}"
+cfg = load_config()
+cfg = cfg['train']
+
+TIMESTEPS = cfg['timesteps']
+MODEL = cfg['name']
+
+modelsDir = os.path.join(cfg['dir'], 'models', MODEL)
+logDir = os.path.join(cfg['dir'], "logs", MODEL)
+
 if not os.path.exists(modelsDir):
     os.makedirs(modelsDir)
-logDir = "/home/group1/workspace/data/logs"
+
 if not os.path.exists(logDir):
     os.makedirs(logDir)
 
@@ -21,18 +32,19 @@ if not os.path.exists(logDir):
 
 env = svpEnv()
 
-model = DQN('MlpPolicy',            # Policy-Netzwerk
-    env,                            # Umgebung
-    gamma=0.99,                     # Diskontierungsfaktor
-    learning_rate=1e-4,             # Stabileres Lernen
-    buffer_size=100000,             # Replay Buffer Größe
-    batch_size=64,                  # Standardwert für DQN
-    train_freq=4,                   # Training nach jeder 4. Aktion
-    target_update_interval=1000,    # Zielnetzwerk-Update-Intervall
-    exploration_fraction=0.1,       # 10% der Trainingszeit für Exploration
-    exploration_final_eps=0.02,     # Minimaler Explorationswert
-    verbose=1,                      # Ausführliche Ausgabe
-    tensorboard_log=logDir          # Tensorboard-Log-Verzeichnis
+
+model = DQN(cfg['policy'],            								# Policy-Netzwerk
+    env,                            								# Umgebung
+    gamma = cfg['DQN']['gamma'],                     				# Diskontierungsfaktor
+    learning_rate = float(cfg['DQN']['learning_rate']),             # Stabileres Lernen
+    buffer_size = cfg['DQN']['buffer_size'],             			# Replay Buffer Größe
+    batch_size = cfg['DQN']['batch_size'],                  		# Standardwert für DQN
+    train_freq = cfg['DQN']['train_freq'],                   		# Training nach jeder 4. Aktion
+    target_update_interval = cfg['DQN']['target_update_intervall'],	# Zielnetzwerk-Update-Intervall
+    exploration_fraction = cfg['DQN']['exploration_fraction'],      # 10% der Trainingszeit für Exploration
+    exploration_final_eps = cfg['DQN']['exploration_final_eps'],    # Minimaler Explorationswert
+    verbose = cfg['DQN']['verbose'],                      			# Ausführliche Ausgabe
+    tensorboard_log = logDir          								# Tensorboard-Log-Verzeichnis
 )
 
 # Training
@@ -40,6 +52,6 @@ model = DQN('MlpPolicy',            # Policy-Netzwerk
 iters = 0
 while True:
     iters += 1
-    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=MODEL)
+    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=cfg['resetTimesteps'], tb_log_name=MODEL)
     model.save(f"{modelsDir}/{TIMESTEPS * iters}")
 
