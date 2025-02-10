@@ -29,5 +29,5 @@ env:
   goals:    
     states: 3                                                     # number of states (x,y,z)
   robot:  
-    stat  es: 2                                                   # number of states (x,y)
+    states: 2                                                     # number of states (x,y)
   
