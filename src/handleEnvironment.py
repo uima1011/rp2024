@@ -171,7 +171,7 @@ class HandleEnvironment():
         return True
     
     def robotLeavedWorkArea(self):
-        '''returns True if robot out of Area''' # TODO
+        '''returns True if robot out of Area'''
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
@@ -179,8 +179,7 @@ class HandleEnvironment():
         if robotX < tableX[1] and robotX > tableX[0]: # check x
             if robotY < tableY[1] and robotY > tableY[0]: # check y
                 leaved = False
-
-        return False # TODO activate with returning leaved
+        return leaved
 
     def objectOffTable(self):
         for key , values in self.IDs.items():
