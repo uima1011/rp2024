@@ -417,6 +417,10 @@ class CalcReward():
 
 
     def getAngleRobVsObjToGoal(self):
+        # function creates line from object to its selected goal 
+        # then measures the angle between this line and the line from robot to object
+        # aim is to make the robot stick on the opposite side of the object than the goal, the most centered as possible
+        
         objName, objPos = next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None)
         colour = objName.split('_')[1]
         _, goalPosDict = next(((obj, pos) for (obj, pos) in self.positions.items() if f'goal_{colour}' in obj), None)
@@ -458,16 +462,43 @@ class CalcReward():
             
         return angle_difference
 
+############################################################################################################
+# The following section contains several different reward functions in order of their evolvement:
+# (some evolvement happened parallelized, e. g. functions with euclidian distance at the end)
+# The intention is to give an insight in the development process of the fifferent aspects and features 
+# that were tried to improve the agent's behaviour with reward engineering
+# 
+# Note: This list isn't complete. Several more configurations were tried out and tested, but not documented here.
+# The following calcReward-functions just stand as examples.  
 
+    def calcReward_start(self):
+        '''
+        basic 3 reward categories for  movement as given at start of project
+            - reward / penalty for robot moving to / away from object
+            - reward / penalty for object moving to / away from goal
+            - attention: REWARD for robot moving AWAY from goal, but less weight than others
+                --> aims for keeping robot behind object
+        additionally: reward for bringing object to goal
 
-    def calcReward(self):
+        later: 
+        time penalty added
+
+        later: 
+        introduce penalty for pushing objects off the table 
+        in order to prevent reward hacking by agent who wants to reduce episode length (gets less time penalty)
+        '''
         self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
         # dictance robot to nearest object 
         self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        
+        # penalty for pushing object off table, otherwise agent commits reward hacking
         if self.handleEnv.objectOffTable():
             reward = -50
             return reward
+        # reward if previous object was pushed into its goal 
+        # --> nearestObject changes
+        # --> prevDist must be changed to new object
         if (self.nearObjectID != self.prevNearObjectID):
             # set previous distance to new nearest obj
             self.prevDistRobToObj = self.distRobToObj
@@ -475,16 +506,158 @@ class CalcReward():
             self.prevDistRobToGoal = self.getDistRobToGoal(self.nearObjectID)
             reward = 15
             return reward
-        # distance of that object to its goal
+        # get distance of that object to its goal
         self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
-        #distance of robot to goal for nearest object
+        # get distance of robot to goal for nearest object
         self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
-        #remeber distances for next step
+        #remember distances for next step
+        reward = -1 # time penalty to make robot fulfill task with the least steps possible 
+
+        # reward / penalty for robot moving to / away from object
+        if (self.prevDistRobToObj - self.distRobToObj) > 0.005: 
+            reward += 1.9 
+        elif (self.distRobToObj - self.prevDistRobToObj) > 0.005: 
+            reward -= 0.9 
+        
+        # reward / penalty for object moving to / away from goal
+        if (self.prevDistObjToGoal - self.distObjToGoal) > 0.005: 
+            reward += 5 
+        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.005: 
+            reward -= 0 
+        
+        # attention: REWARD for robot moving AWAY from goal to make robot stay behind object
+        if (self.prevDistRobToGoal - self.distRobToGoal) > 0.005: 
+            reward -= 0.5 
+        elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.005: 
+            reward += 0.5 
+
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        
+        self.prevDistRobToObj = self.distRobToObj
+        self.prevDistObjToGoal = self.distObjToGoal
+        self.prevDistRobToGoal = self.distRobToGoal
+
+        return reward
+    
+    
+    def calcReward_RobBehindObj(self):
+        '''
+        main test idea of this reward function: 
+        give the agent extra reward if robot is behind object, 
+        meaning further robot is further awy from goal than object is from goal
+
+        later: special conditions added for reward when robot is in front of object
+        '''
+        self.positions = self.handleEnv.getPositions()
+        self.prevNearObjectID = self.nearObjectID
+        # dictance robot to nearest object 
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        
+        # penalty for pushing object off table, otherwise agent commits reward hacking
+        if self.handleEnv.objectOffTable():
+            reward = -50
+            return reward
+        # reward if previous object was pushed into ts goal 
+        # --> nearestObject changes
+        # --> prevDist must be changed to new object
+        if (self.nearObjectID != self.prevNearObjectID):
+            # set previous distance to new nearest obj
+            self.prevDistRobToObj = self.distRobToObj
+            self.prevDistObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+            self.prevDistRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+            reward = 15
+            return reward
+        # get distance of that object to its goal
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        # get distance of robot to goal for nearest object
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        #remember distances for next step
         reward = -1 # time penalty to make robot fulfill task with the least steps possible 
         
-        angle_difference = self.getAngleRobVsObjToGoal()
-        print(f"Angle Robot dissenting from perfect position (=0°): {angle_difference}")
+        # reward / penalty for robot moving to / away from object
+        if (self.prevDistRobToObj - self.distRobToObj) > 0.0001: 
+            reward += 4 
+        elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001: 
+            reward -= 4 
 
+        # reward / penalty for object moving to / away from goal
+        if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001: 
+            reward += 10 
+        elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001: 
+            reward -= 15 
+
+        # NEW: reward / penalty for robot being behind / in front of object
+        if (self.distRobToGoal - self.distObjToGoal) > 0.001: 
+            reward += 2 
+        elif (self.distObjToGoal - self.distRobToGoal) > 0.001: 
+            reward -= 1 
+
+        # ADAPTED: Reward for robot moving away from goal (only if robot is closer to goal than object is to goal)
+        if (self.distRobToGoal < self.distObjToGoal):
+            if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
+                reward -= 1
+            elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
+                reward += 1
+
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        
+        self.prevDistRobToObj = self.distRobToObj
+        self.prevDistObjToGoal = self.distObjToGoal
+        self.prevDistRobToGoal = self.distRobToGoal
+
+        return reward
+    
+
+    def calcReward_circle_angle(self):
+        '''
+        main test idea of this reward function: 
+        introduce circle around object with different sections for reward calculation
+        as presented in presentation on Jan 30th 2025, see slide 11
+        aims to make robot move behind object whilst allowing penalty free zone to get there
+        
+        reward for pushing object into goal, impossible to switch objects
+       
+        added as reaction to question / feedback in presentation on Jan 30th 2025: 
+        external function getAngleRobVsObjToGoal() so that robot only gets reward 
+        when robot within defined section arounfd center line behind object
+        '''
+        self.positions = self.handleEnv.getPositions()
+        self.prevNearObjectID = self.nearObjectID
+        # dictance robot to nearest object 
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        
+        # penalty for pushing object off table, otherwise agent commits reward hacking
+        if self.handleEnv.objectOffTable():
+            reward = -50
+            return reward
+        # reward if previous object was pushed into ts goal 
+        # --> nearestObject changes
+        # --> prevDist must be changed to new object
+        if (self.nearObjectID != self.prevNearObjectID):
+            # set previous distance to new nearest obj
+            self.prevDistRobToObj = self.distRobToObj
+            self.prevDistObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+            self.prevDistRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+            reward = 15
+            return reward
+        # get distance of that object to its goal
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        # get distance of robot to goal for nearest object
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        #remember distances for next step
+        reward = -1 # time penalty to make robot fulfill task with the least steps possible 
+        
+        '''
+        particular part for angle of robot away from perfect center position
+        '''
+        # get angle that robot position is offcentered from perfect position behind object (=0°)
+        angle_Rob_offcentered = self.getAngleRobVsObjToGoal()
+        print(f"Angle Robot dissenting from perfect position (=0°): {angle_Rob_offcentered}")
+
+        '''
+        particular part introducing circle function around object for reward calculation 
+        as presented in presentation on Jan 30th 2025
+        '''
         if (self.distRobToGoal < self.distObjToGoal): # robot is closer to goal than object is to goal
             # (robot in front of object)
             print(f"Robot in front of object")
@@ -513,7 +686,7 @@ class CalcReward():
             #print(f"Robot to goal: {self.distRobToGoal}")
             #print(f"Object to goal: {self.distObjToGoal}")
             reward += 0.5 # general reward for robot being further away from goal than object is to goal 
-            if angle_difference < 30:
+            if angle_Rob_offcentered < 30: # connect reward to condition that robot is within 30° of perfect position
                 if ((self.prevDistRobToObj - self.distRobToObj) > 0.0001):
                     reward += 4
                     # reward if robot is moving towards object
@@ -526,35 +699,6 @@ class CalcReward():
         elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001:
             reward -= 15
 
-        ## nicht verwendet in “DQN_normiert_full_observationspace_reward_changed”
-        # Reward for robot moving away from goal (only if robot is closer to goal than object is to goal)
-        # if (self.distRobToGoal < self.distObjToGoal):
-        #     if (self.prevDistRobToGoal - self.distRobToGoal) > 0.0001:
-        #         reward -= 1
-        #     elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.0001:
-        #         reward += 1
-
-        # if (self.prevDistRobToObj - self.distRobToObj) > 0.0001: 
-        #     reward += 4 
-        # elif (self.distRobToObj - self.prevDistRobToObj) > 0.0001: 
-        #     reward -= 4 
-
-        # if (self.prevDistObjToGoal - self.distObjToGoal) > 0.0001: 
-        #     reward += 10 
-        # elif (self.distObjToGoal - self.prevDistObjToGoal) > 0.0001: 
-        #     reward -= 15 
-
-        # # nicht verwendet in "DQN_norm_full_obssp_rew_dist_comparison_v01"
-        # # if (self.prevDistRobToGoal - self.distRobToGoal) > 0.00001: 
-        # #   reward -= 1 
-        # # elif (self.distRobToGoal - self.prevDistRobToGoal) > 0.00001: 
-        # #   reward += 1 
-
-        # if (self.distRobToGoal - self.distObjToGoal) > 0.001: 
-        #     reward += 2 
-        # elif (self.distObjToGoal - self.distRobToGoal) > 0.001: 
-        #     reward -= 1 
-
         print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
         
         self.prevDistRobToObj = self.distRobToObj
@@ -563,31 +707,53 @@ class CalcReward():
 
         return reward
 
-    # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
-    #     reward = 0
-    #     self.positions = self.handleEnv.getPositions()
-    #     self.prevNearObjectID = self.nearObjectID
-    #     self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
-    #     self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
-    #     self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
-    #     if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
-    #         self.prevDistRobToObj = self.distRobToObj
-    #         self.prevDistObjToGoal = self.distObjToGoal
-    #         self.prevDistRobToGoal = self.distRobToGoal
-    #         reward =+ 15 # award one more object in goal
 
-    #     rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
-    #     rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
-    #     rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
-    #     print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
-    #     return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
+    def calcReward_eucl_steady(self): 
+        '''
+        main test idea of this reward function: 
+        rewards are not given as absolutes, 
+        but according to the euclidian distance between robot and object, object and goal, robot and goal
+        
+        reward for pushing object into goal, impossible to switch objects
+        '''
+        reward = 0
+        self.positions = self.handleEnv.getPositions()
+        self.prevNearObjectID = self.nearObjectID
+        self.distRobToObj, self.nearObjectID = self.getNearestObjToRob()
+        self.distObjToGoal = self.getDistObjToGoal(self.nearObjectID)
+        self.distRobToGoal = self.getDistRobToGoal(self.nearObjectID)
+        if (self.nearObjectID != self.prevNearObjectID): # new object --> reset treshhold so euclidian reward starts with 0
+            self.prevDistRobToObj = self.distRobToObj
+            self.prevDistObjToGoal = self.distObjToGoal
+            self.prevDistRobToGoal = self.distRobToGoal
+            reward =+ 15 # award one more object in goal
 
-    def calcReward2(self):
+        rewardRobToObj = self.prevDistRobToObj - self.distRobToObj
+        rewardObjToGoal = self.prevDistObjToGoal - self.distObjToGoal
+        rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
+        print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
+        return reward + (3*rewardRobToObj + 2*rewardObjToGoal - rewardRobToGoal) 
+        # base reward + euclidian rewards with different weights
+
+
+    def calcReward_eucl_switchObj(self):
+        '''
+        main test idea of this reward function: 
+        allow robot to switch to currently nearestObject every step
+
+        rewards are not given as absolutes, 
+        but according to the euclidian distance between robot and object and 
+        sum of all distances between objects and their respective goal
+        reward for pushing object into goal not working (see comment)
+        '''    
+        # intention to separate training into different phases
         step = 1 # 1 = move to obj, 2 = move obj to goal
 
         self.positions = self.handleEnv.getPositions()
         self.prevNearObjectID = self.nearObjectID
-        # dictance robot to nearest object 
+        # determine currently nearest object to robot and its distance
+        # --> allow to trace object that is closest to its current position, not start position 
+        # --> nearestObject can be switched every step 
         self.distRobToObj, self.nearObjectID = self.getDistRobotToObject()
         if self.handleEnv.objectOffTable():
             reward = -50
@@ -595,6 +761,11 @@ class CalcReward():
         if self.prevNearObjectID is None:
             self.startDistanceRobToObj = self.distRobToObj
             self.startDistanceObjectsToGoals = self.getDistObjectsToGoal()
+
+        # reward for pushing object into goal based n switch of objects is imcompatible with 
+        # main character idea of this function to allow robot to switch to currently nearestObject every step
+        # (therefore following code in comment) 
+        
         # if (self.nearObjectID != self.prevNearObjectID):
         #     # set previous distance to new nearest obj
         #     self.prevDistRobToObj = self.distRobToObj
@@ -618,10 +789,10 @@ class CalcReward():
             reward = 100
             return reward
         reward = 0
+        # give reward according to euclidian distance
         if step == 1:
             reward += self.startDistanceRobToObj - self.distRobToObj
             reward += self.startDistanceObjectsToGoals - self.distObjectsToGoal
-
 
         self.prevDistRobToObj = self.distRobToObj
         self.prevDistObjToGoal = self.distObjToGoal
@@ -629,6 +800,10 @@ class CalcReward():
 
         return reward
     
+    # end of reward functions
+    ############################################################################################################
+
+
     def getStatePositions(self):
         '''Returns normalized, flattened list as observation for robot, nearest object, and its corresponding goal'''
         robotState = self.positions['robot']
@@ -661,6 +836,7 @@ class CalcReward():
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
  
+
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
     hEnv.spawnGoals()
