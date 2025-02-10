@@ -1,3 +1,7 @@
+'''
+Skript contains functions to handle the environment (objects, goals and rewards)
+'''
+
 from pybullet_utils.bullet_client import BulletClient
 from bullet_env.bullet_robot import BulletRobot
 from transform import Affine
@@ -138,7 +142,6 @@ class HandleEnvironment():
         positionDict['robot'] = self.robot.get_eef_pose().translation[:2]
         return positionDict
 
-
     def performAction(self, action):
         current_pose = self.robot.get_eef_pose()
         fixed_orientation = [-np.pi, 0, np.pi/2]
@@ -167,7 +170,6 @@ class HandleEnvironment():
 
         return True
     
-
     def robotLeavedWorkArea(self):
         '''returns True if robot out of Area''' # TODO
         [robotX, robotY] = self.robot.get_eef_pose().translation[:2]
@@ -197,7 +199,6 @@ class HandleEnvironment():
         if misbehaviour==True:
             print(f"Misbehaviour: {misbehaviour}")
         return misbehaviour
-    
 
 class HandleObjects():
     def __init__(self, assets_folder):
@@ -457,7 +458,6 @@ class CalcReward():
 
         return reward
 
-   
     # def calcReward2(self): # use euclidian distance and reward pushing object into goal, punish switching objects
     #     reward = 0
     #     self.positions = self.handleEnv.getPositions()
@@ -476,7 +476,6 @@ class CalcReward():
     #     rewardRobToGoal = self.prevDistRobToGoal - self.distRobToGoal
     #     print(f"Nearest Object:", next(((obj, pos[self.nearObjectID]) for (obj, pos) in self.positions.items() if self.nearObjectID in self.positions[obj]), None))
     #     return reward + (3*rewardRobToObj + 2*rewardObjToGoal + rewardRobToGoal) # base reward + euclidian rewards
-    
 
     def calcReward2(self):
         step = 1 # 1 = move to obj, 2 = move obj to goal
@@ -556,7 +555,6 @@ class CalcReward():
                 nearestGoalState[1] = self.handleEnv.normalize(goalPos[1], self.handleEnv.hO.tableCords['y'][0], self.handleEnv.hO.tableCords['y'][1])
 
         return np.concatenate([robotState, nearestObjectState, nearestGoalState])
-
  
 def main():
     hEnv = HandleEnvironment(render=True, assets_folder="/home/group1/workspace/assets")
