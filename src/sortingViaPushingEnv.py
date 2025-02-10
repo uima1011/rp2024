@@ -18,31 +18,35 @@ import numpy as np
 import math
 
 from handleEnvironment import HandleEnvironment, CalcReward
+import config
+
+cfg = config.load()
+cfg = cfg['env']
 
 # Setup Simulation
-RENDER = True
-ASSETS_PATH = "/home/group1/workspace/assets"
+RENDER = cfg['render']
+ASSETS_PATH = cfg['assetsPath']
 
 # Train:
-MAX_STEPS = 200
+MAX_STEPS = cfg['maxSteps']
 
 # Environment
-colours = ['green', 'red']
-objectFolders = ['signs', 'cubes']
-parts = ['plus', 'cube']
+colours = cfg['colours']
+objectFolders = cfg['objects']['dirs']
+parts = cfg['objects']['parts']
 
-ROBOT_STATE_COUNT = 2 # x and y
-MAX_OBJECT_COUNT = 3*len(colours)*len(parts) # max 4 of each object type and colour
+ROBOT_STATE_COUNT = cfg['robot']['states'] # x and y
+MAX_OBJECT_COUNT = cfg['objects']['number']*len(colours)*len(parts) # max 4 of each object type and colour
 GOAL_COUNT = len(colours) # red and green
-OBJECT_STATE_COUNT = 3 # x, y and rotation arround z
-GOAL_STATE_COUNT = 3 # x, y and rotation arround z
+OBJECT_STATE_COUNT = cfg['objects']['states'] # x, y and rotation arround z
+GOAL_STATE_COUNT = cfg['goals']['states'] # x, y and rotation arround z
 
 class sortingViaPushingEnv(gym.Env):
 	"""Custom Environment that follows gym interface"""
 	
 	def __init__(self):
 		super(sortingViaPushingEnv, self).__init__()
-		self.action_space = gym.spaces.Discrete(4) # 4 directions (forward, backward, left, right)
+		self.action_space = gym.spaces.Discrete(cfg['actions']) # 4 directions (forward, backward, left, right)
 		state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * MAX_OBJECT_COUNT + GOAL_STATE_COUNT * GOAL_COUNT # robot + max objects + goal states
 		#state_dim = ROBOT_STATE_COUNT + OBJECT_STATE_COUNT * 1 + GOAL_STATE_COUNT * 1 # robot + max objects + goal states
 		self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf,

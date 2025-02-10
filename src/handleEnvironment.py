@@ -8,11 +8,16 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 import os
 import time
+import config
 
-colours = ['green', 'red']
-objectFolders = ['signs', 'cubes']
-parts = ['plus', 'cube']
-MAX_OBJECT_PER_TYPE = 3
+cfg = config.load()
+cfg = cfg['env']
+
+colours = cfg['colours']
+objectFolders = cfg['objects']['dirs']
+parts = cfg['objects']['parts']
+
+MAX_OBJECT_PER_TYPE = cfg['objects']['number']
 MAX_OBJECT_COUNT = MAX_OBJECT_PER_TYPE*len(colours)*len(parts)
 
 class HandleEnvironment():
