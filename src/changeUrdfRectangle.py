@@ -1,15 +1,25 @@
+'''
+    Skript to change the URDF file of the goal object
+    creates 4 rectangles as boarders around the goal
+    change file-path and dimensions under settings-comment
+'''
+
 import xml.etree.ElementTree as ET
 import re
-
+############################################################################################################
 # settings
+############################################################################################################
+
 input_file = 'assets/objects/goals/goal_red.urdf'
 output_file = 'assets/objects/goals/goal_red.urdf'
 x_dez = 0.16 # defines inner rectangle
 y_dez = 0.16
 border_width = 0.001 # defines line width of rectangle
 
-
+############################################################################################################
 # calculation
+############################################################################################################
+
 x_w_g = x_dez
 y_w_g = y_dez + 2*border_width
 
@@ -38,6 +48,10 @@ dimensions = {
 }
 print(dimensions)
 
+############################################################################################################
+# change URDF with new dimensions
+############################################################################################################
+
 # Parse the URDF file
 tree = ET.parse(input_file)
 root = tree.getroot()
@@ -55,7 +69,10 @@ for link in root.findall('.//link'):
             # Update vertical borders (y_length)
             box.set('size', f"{dimensions['border']} {dimensions['y_length']} {dimensions['border']}")
 
+############################################################################################################
 # Update joint positions
+############################################################################################################
+
 for joint in root.findall('.//joint'):
     joint_name = joint.get('name')
     origin = joint.find('origin')
@@ -70,7 +87,9 @@ for joint in root.findall('.//joint'):
         elif 'right_border_joint' in joint_name:
             origin.set('xyz', f"{dimensions['positions']['right']['x']} {dimensions['positions']['right']['y']} {dimensions['positions']['right']['z']}")
 
+############################################################################################################
 # Write the modified URDF to a new file
+############################################################################################################
 
 # Convert the tree to a string with proper indentation
 xml_str = ET.tostring(root, encoding='unicode')

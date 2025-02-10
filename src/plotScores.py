@@ -1,3 +1,7 @@
+'''
+Skript to plot the scores of the different models.
+'''
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
@@ -12,7 +16,7 @@ dateien = [
     "DQN_normiert_push_after_to_object_withNegativRewards.csv"
 ]
 
-# Kürzere Titel
+# geänderte Titel
 titel = [
     "DQN: Normal",
     "DQN: Small Observation Space",
@@ -22,7 +26,7 @@ titel = [
     "DQN: Push Negative Reward"
 ]
 
-# Anzahl der Subplots bestimmen
+# Anzahl der Subplots
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 axes = axes.flatten()
 
