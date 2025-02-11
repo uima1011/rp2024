@@ -182,8 +182,8 @@ class HandleEnvironment():
         tableX = self.hO.tableCords['x']
         tableY = self.hO.tableCords['y']
         leaved = True
-        if robotX < tableX[1] and robotX > tableX[0]: # check x
-            if robotY < tableY[1] and robotY > tableY[0]: # check y
+        if robotX < (tableX[1]+0.5) and robotX > (tableX[0]-0.5): # check x
+            if robotY < (tableY[1]+0.5) and robotY > (tableY[0]-0.5): # check y
                 leaved = False
         return leaved
 

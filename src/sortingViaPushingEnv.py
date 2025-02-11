@@ -130,7 +130,7 @@ class sortingViaPushingEnv(gym.Env):
 			self.terminated = True
 			self.reward = -1000
 		else:
-			self.reward = self.calcReward.calcReward()
+			self.reward = self.calcReward.calcReward_start()
 		if self.stepCount >= MAX_STEPS-1:
 			self.truncated = True
 		info = {'Step': self.stepCount, 'Reward': self.reward, 'Action': action, 'Terminated': self.terminated, 'Truncated': self.truncated}
